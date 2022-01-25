@@ -1,5 +1,5 @@
 [package]
-name = "non-fungible-token"
+name = "escrow"
 version = "1.1.0"
 authors = ["ArtPay"]
 edition = "2018"
