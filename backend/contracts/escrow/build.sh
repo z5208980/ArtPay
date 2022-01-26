@@ -22,7 +22,14 @@ main() {
     deploy_contract     # deploy contract to fresh subaccount
 }
 
-main
+# main
 
+# CLI testing commands
 # near call $SUBACCOUNT create_new_escrow '{"contractor": "escrow.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1"}' --accountId $SUBACCOUNT
-# near call $SUBACCOUNT get_a_escrow '{"client": "escrow.artpay.testnet", "id": "1"}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "escrow.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1"}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "escrow.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1"}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT client_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT contractor_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT

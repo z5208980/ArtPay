@@ -1,4 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::{env, near_bindgen, AccountId, setup_alloc, PanicOnDefault};
 // use near_sdk::collections::LookupMap;
 use std::collections::HashMap;
@@ -11,7 +12,8 @@ setup_alloc!();
 /*
     escrow itself as struct
 */
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct Escrow {
     client: AccountId,
     contractor: AccountId,
@@ -25,7 +27,6 @@ pub struct Escrow {
     timestamp: u128, // epoch_time
 }
 
-
 /*
     This allows for O(1) lookup of a escrow for a particular user
     total no. escrow created,
@@ -38,7 +39,7 @@ pub struct ArtPay {
     owner_id: AccountId,
     total_escrows: u128,
     n_escrows: HashMap<AccountId, u128>,   
-    escrows: HashMap<AccountId, HashMap<u128, Escrow>>,
+    escrow_list: HashMap<AccountId, HashMap<u128, Escrow>>,
 }
 
 #[near_bindgen]
@@ -49,7 +50,7 @@ impl ArtPay {
             owner_id,
             total_escrows: 0,
             n_escrows: HashMap::new(),
-            escrows: HashMap::new(),
+            escrow_list: HashMap::new(),
         }
     }
 
@@ -66,7 +67,7 @@ impl ArtPay {
             None => self.n_escrows.insert(account_id.clone(), escrow_id)
         };
 
-        self.escrows.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
+        self.escrow_list.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
             client: account_id.clone(),
             contractor,
             client_approval: false,
@@ -82,10 +83,74 @@ impl ArtPay {
         escrow_id   // return escrow_id
     }
 
-    pub fn get_a_escrow(&self, client: AccountId, id: u128) -> AccountId {
-        match self.escrows.get(&client).and_then(|m| m.get(&id)) {
-            Some(escrow) => return escrow.client.to_string(),
-            None => return "Escrow Doesn't Exist".to_string(),
+    pub fn client_approval(&mut self, client: AccountId, id: u128) -> bool {
+        match self.get_escrow(client.clone(), id.clone()){
+            Some(current_escrow) => {
+                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, Escrow {
+                    client: current_escrow.client,
+                    contractor: current_escrow.contractor,
+                    client_approval: true,
+                    contractor_approval: current_escrow.contractor_approval,
+                    nft_address: current_escrow.nft_address,
+                    token_id: current_escrow.token_id,
+                    timestamp: current_escrow.timestamp,
+                });
+               return true;
+            },
+            None => return false,
+        };
+    }
+
+    pub fn contractor_approval(&mut self, client: AccountId, id: u128) -> bool {
+        match self.get_escrow(client.clone(), id.clone()){
+            Some(current_escrow) => {
+                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, Escrow {
+                    client: current_escrow.client,
+                    contractor: current_escrow.contractor,
+                    client_approval: current_escrow.client_approval,
+                    contractor_approval: true,
+                    nft_address: current_escrow.nft_address,
+                    token_id: current_escrow.token_id,
+                    timestamp: current_escrow.timestamp,
+                });
+               return true;
+            },
+            None => return false,
+        };
+    }
+
+    pub fn release_escrow(&mut self, client: AccountId, id: u128) -> bool {
+        match self.get_escrow(client.clone(), id.clone()){
+            Some(current_escrow) => {
+                if current_escrow.client_approval && current_escrow.contractor_approval {
+                    return true;
+                } else {
+                    return false;
+                }
+            },
+            None => return false,
+        };
+    }
+
+    pub fn get_escrow(&self, client: AccountId, id: u128) -> Option<Escrow> {
+        match self.escrow_list.get(&client) {
+            Some(escrows) => {
+                match escrows.get(&id) {
+                    Some(escrow) => {
+                        return Some(Escrow {             
+                            client: escrow.client.to_string(),
+                            contractor: escrow.contractor.to_string(),
+                            client_approval: escrow.client_approval,
+                            contractor_approval: escrow.contractor_approval,
+                            nft_address: escrow.nft_address.to_string(),
+                            token_id: escrow.token_id.to_string(),
+                            timestamp: escrow.timestamp,
+                        });
+                    },
+                    None => return None,
+                };
+            },
+            None => return None,
         };
     }
 }
