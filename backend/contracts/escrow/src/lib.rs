@@ -11,8 +11,19 @@ use std::collections::HashMap;
 //  SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).as_sec();
 use near_contract_standards::non_fungible_token::{TokenId}; 
 
+use near_sdk::{ext_contract};
+
 setup_alloc!();
 
+#[ext_contract(nft_interface)]
+trait NonFungibleToken {
+    // change methods
+    fn nft_transfer(&mut self, receiver_id: String, token_id: String, approval_id: Option<u64>, memo: Option<String>);
+    fn nft_transfer_call(&mut self, receiver_id: String, token_id: String, approval_id: Option<u64>, memo: Option<String>, msg: String) -> bool;
+
+    // view method
+    fn nft_token(&self, token_id: String) -> Option<Token>;
+}
 
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Copy, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -44,6 +55,10 @@ pub struct Escrow {
     escrow_state: EscrowState,
 }
 
+#[ext_contract(ext_self)]
+pub trait ArtPay {
+    fn my_callback(&self) -> String;
+}
 /*
     This allows for O(1) lookup of a escrow for a particular user
     total no. escrow created,
@@ -71,6 +86,49 @@ impl ArtPay {
         }
     }
 
+    // TESTING NFT TRANSFER
+    // TODO: https://docs.near.org/docs/tutorials/contracts/xcc-receipts
+    pub fn set_nft_deliverable(&self, nft_address: AccountId,  token_id: TokenId,) -> Promise {
+        // receiver_id: String, token_id: String, approval_id: Option<u64>, memo: Option<String>
+        nft_interface::nft_transfer(
+            "escrow.artpay.testnet".to_string(), // give to this contract for locking
+            token_id.clone(),
+            Some(0),
+            Some("For Escrow ArtPay".to_string()),
+            &nft_address, // nft contract
+            0, // yocto NEAR to attach
+            5_000_000_000_000 // gas to attach
+        )
+        .then(ext_self::my_callback(
+            &env::current_account_id(), // this contract's account id
+            0, // yocto NEAR to attach to the callback
+            5_000_000_000_000 // gas to attach to the callback
+        ))
+    }
+
+    pub fn my_callback(&self) -> String {
+        assert_eq!(
+            env::promise_results_count(),
+            1,
+            "This is a callback method"
+        );
+
+        // // handle the result from the cross contract call this method is a callback for
+        // match env::promise_result(0) {
+        //     PromiseResult::NotReady => unreachable!(),
+        //     PromiseResult::Failed => "oops!".to_string(),
+        //     PromiseResult::Successful(result) => {
+        //         let balance = near_sdk::serde_json::from_slice::<U128>(&result).unwrap();
+        //         if balance.0 > 100000 {
+        //             "Wow!".to_string()
+        //         } else {
+        //             "Hmmmm".to_string()
+        //         }
+        //     },
+        // }
+        "Callback".to_string()
+    }
+
     #[payable]
     pub fn create_new_escrow(
         &mut self, 
@@ -80,6 +138,7 @@ impl ArtPay {
         timestamp: u128,
     ) -> u128 {
         let account_id = env::signer_account_id(); // msg.sender
+        
         self.total_escrows += 1;
 
         let mut escrow_id = 0;

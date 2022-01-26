@@ -19,15 +19,15 @@ deploy_contract() {
 
 main() {
     cargo build --target wasm32-unknown-unknown --release       # Compile
-    reset_sub_account   # Make subaccount for new contract
-    deploy_contract     # deploy contract to fresh subaccount
+    # reset_sub_account   # Make subaccount for new contract
+    # deploy_contract     # deploy contract to fresh subaccount
 }
 
 main
 
 # CLI testing commands
-near call $SUBACCOUNT create_new_escrow '{"contractor": "escrow.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 1234423}' --accountId $SUBACCOUNT
-near call $SUBACCOUNT create_new_escrow '{"contractor": "nft.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 1234234}' --accountId $SUBACCOUNT --deposit 5
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "escrow.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 1234423}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "nft.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 1234234}' --accountId $SUBACCOUNT --deposit 5
 # near call $SUBACCOUNT create_new_escrow '{"contractor": "escrow.artpay.testnet", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 3243543}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT client_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
