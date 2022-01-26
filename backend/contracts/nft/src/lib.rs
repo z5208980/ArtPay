@@ -24,7 +24,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LazyOption;
 use near_sdk::json_types::ValidAccountId;
 use near_sdk::{
-    env, near_bindgen, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue,
+    env, near_bindgen, assert_one_yocto, AccountId, BorshStorageKey, PanicOnDefault, Promise, PromiseOrValue,
 };
 
 near_sdk::setup_alloc!();
@@ -58,8 +58,8 @@ impl Contract {
             owner_id,
             NFTContractMetadata {
                 spec: NFT_METADATA_SPEC.to_string(),
-                name: "Example NEAR non-fungible token".to_string(),
-                symbol: "EXAMPLE".to_string(),
+                name: "ArtPay NFT".to_string(),
+                symbol: "APNFT".to_string(),
                 icon: Some(DATA_IMAGE_SVG_NEAR_ICON.to_string()),
                 base_uri: None,
                 reference: None,
@@ -115,6 +115,31 @@ impl Contract {
     pub fn get_n_tokens(&self) -> u128 {
         return self.n_tokens;
     } 
+
+    // #[payable]
+    // pub fn _nft_transfer(
+    //     &mut self,
+    //     // receiver_id: AccountId,
+    //     token_id: TokenId,
+    //     // memo: Option<String>,
+    // ) -> Option<Token> {
+    //     //assert that the user attached exactly 1 yoctoNEAR. This is for security and so that the user will be redirected to the NEAR wallet. 
+    //     assert_one_yocto();
+    //     //get the sender to transfer the token from the sender to the receiver
+    //     let sender_id = env::predecessor_account_id();
+
+    //     //call the internal transfer method
+    //     let token = self.nft_token(token_id);
+
+    //     // if let Some(token) = token {
+    //     //     //if the sender doesn't equal the owner, we panic
+    //     //     if sender_id != token.owner_id {
+    //     //         return;
+    //     //     }
+    //     // }
+    //     // self.internal_remove_token_from_owner(&token.owner_id, token_id);
+    //     token
+    // }
 }
 
 near_contract_standards::impl_non_fungible_token_core!(Contract, tokens);

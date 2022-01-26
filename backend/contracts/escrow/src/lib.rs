@@ -9,10 +9,20 @@ use near_contract_standards::non_fungible_token::{TokenId};
 
 setup_alloc!();
 
+
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Copy, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub enum EscrowState {
+    AWAITING,
+    APPROVAL,
+    COMPLETE,
+    CANCEL,
+}
+
 /*
     escrow itself as struct
 */
-#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct Escrow {
     client: AccountId,
@@ -25,6 +35,7 @@ pub struct Escrow {
     token_id: TokenId,
 
     timestamp: u128, // epoch_time
+    escrow_state: EscrowState,
 }
 
 /*
@@ -54,7 +65,13 @@ impl ArtPay {
         }
     }
 
-    pub fn create_new_escrow(&mut self, contractor: AccountId, nft_address: AccountId, token_id: TokenId) -> u128 {
+    pub fn create_new_escrow(
+        &mut self, 
+        contractor: AccountId, 
+        nft_address: AccountId, 
+        token_id: TokenId,
+        timestamp: u128,
+    ) -> u128 {
         let account_id = env::signer_account_id(); // msg.sender
         self.total_escrows += 1;
 
@@ -72,30 +89,28 @@ impl ArtPay {
             contractor,
             client_approval: false,
             contractor_approval: false,
-            nft_address, // since contract address === account_address
+            nft_address,
             token_id,
-            timestamp: 21312, // epoch_time in seconds
+            timestamp, 
+            escrow_state: EscrowState::AWAITING,
         });
 
         // Use env::log to record logs permanently to the blockchain!
         env::log(format!("New Escrow create by {}", account_id).as_bytes());
 
-        escrow_id   // return escrow_id
+        escrow_id
     }
 
     pub fn client_approval(&mut self, client: AccountId, id: u128) -> bool {
         match self.get_escrow(client.clone(), id.clone()){
-            Some(current_escrow) => {
-                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, Escrow {
-                    client: current_escrow.client,
-                    contractor: current_escrow.contractor,
-                    client_approval: true,
-                    contractor_approval: current_escrow.contractor_approval,
-                    nft_address: current_escrow.nft_address,
-                    token_id: current_escrow.token_id,
-                    timestamp: current_escrow.timestamp,
-                });
-               return true;
+            Some(mut escrow) => {
+                let account_id = env::signer_account_id();
+                if account_id == escrow.client {
+                    escrow.client_approval = true;
+                    self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
+                    return true;
+                };
+               return false;
             },
             None => return false,
         };
@@ -103,26 +118,26 @@ impl ArtPay {
 
     pub fn contractor_approval(&mut self, client: AccountId, id: u128) -> bool {
         match self.get_escrow(client.clone(), id.clone()){
-            Some(current_escrow) => {
-                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, Escrow {
-                    client: current_escrow.client,
-                    contractor: current_escrow.contractor,
-                    client_approval: current_escrow.client_approval,
-                    contractor_approval: true,
-                    nft_address: current_escrow.nft_address,
-                    token_id: current_escrow.token_id,
-                    timestamp: current_escrow.timestamp,
-                });
-               return true;
+            Some(mut escrow) => {
+                let account_id = env::signer_account_id();
+                if account_id == escrow.contractor {
+                    escrow.contractor_approval = true;
+                    self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
+                    return true;
+                };
+               return false;
             },
             None => return false,
         };
     }
 
+    #[payable]
     pub fn release_escrow(&mut self, client: AccountId, id: u128) -> bool {
         match self.get_escrow(client.clone(), id.clone()){
-            Some(current_escrow) => {
-                if current_escrow.client_approval && current_escrow.contractor_approval {
+            Some(mut escrow) => {
+                if escrow.client_approval && escrow.contractor_approval {
+                    escrow.escrow_state = EscrowState::COMPLETE;
+                    self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
                     return true;
                 } else {
                     return false;
@@ -135,20 +150,7 @@ impl ArtPay {
     pub fn get_escrow(&self, client: AccountId, id: u128) -> Option<Escrow> {
         match self.escrow_list.get(&client) {
             Some(escrows) => {
-                match escrows.get(&id) {
-                    Some(escrow) => {
-                        return Some(Escrow {             
-                            client: escrow.client.to_string(),
-                            contractor: escrow.contractor.to_string(),
-                            client_approval: escrow.client_approval,
-                            contractor_approval: escrow.contractor_approval,
-                            nft_address: escrow.nft_address.to_string(),
-                            token_id: escrow.token_id.to_string(),
-                            timestamp: escrow.timestamp,
-                        });
-                    },
-                    None => return None,
-                };
+                return escrows.get(&id).cloned();
             },
             None => return None,
         };

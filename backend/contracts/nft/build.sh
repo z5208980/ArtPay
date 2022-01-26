@@ -18,8 +18,8 @@ deploy_contract() {
 
 main() {
     cargo build --target wasm32-unknown-unknown --release       # Compile
-    reset_sub_account   # Make subaccount for new contract
-    deploy_contract     # deploy contract to fresh subaccount
+    # reset_sub_account   # Make subaccount for new contract
+    # deploy_contract     # deploy contract to fresh subaccount
 }
 
 main
