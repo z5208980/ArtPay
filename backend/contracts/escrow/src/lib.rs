@@ -1,6 +1,10 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Serialize, Deserialize};
-use near_sdk::{env, near_bindgen, AccountId, setup_alloc, PanicOnDefault};
+use near_sdk::{
+    env, near_bindgen, AccountId, setup_alloc, PanicOnDefault,
+    Promise,
+    // json_types::U128,
+};
 // use near_sdk::collections::LookupMap;
 use std::collections::HashMap;
 // use std::time::SystemTime;   // Will need to getting over due escrows
@@ -27,6 +31,8 @@ pub enum EscrowState {
 pub struct Escrow {
     client: AccountId,
     contractor: AccountId,
+
+    locked_amount: u128,
 
     client_approval: bool,
     contractor_approval: bool,
@@ -65,6 +71,7 @@ impl ArtPay {
         }
     }
 
+    #[payable]
     pub fn create_new_escrow(
         &mut self, 
         contractor: AccountId, 
@@ -87,6 +94,7 @@ impl ArtPay {
         self.escrow_list.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
             client: account_id.clone(),
             contractor,
+            locked_amount: near_sdk::env::attached_deposit(),
             client_approval: false,
             contractor_approval: false,
             nft_address,
@@ -97,7 +105,7 @@ impl ArtPay {
 
         // Use env::log to record logs permanently to the blockchain!
         env::log(format!("New Escrow create by {}", account_id).as_bytes());
-
+    
         escrow_id
     }
 
@@ -132,10 +140,18 @@ impl ArtPay {
     }
 
     #[payable]
+    pub fn take_my_money(&mut self) -> bool {
+        true
+    }
+
+    #[payable]
     pub fn release_escrow(&mut self, client: AccountId, id: u128) -> bool {
-        match self.get_escrow(client.clone(), id.clone()){
+        match self.get_escrow(client.clone(), id.clone()) {
             Some(mut escrow) => {
                 if escrow.client_approval && escrow.contractor_approval {
+                    let to = escrow.contractor.clone();
+                    Promise::new(to).transfer(escrow.locked_amount); // FUNDS RELEASED HERE! pay to contractor the locked funds of this escrow
+                    escrow.locked_amount = 0;
                     escrow.escrow_state = EscrowState::COMPLETE;
                     self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
                     return true;

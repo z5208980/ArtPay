@@ -41,13 +41,15 @@
       getNumberOfToken
     </div>
 
-
+    <div @click="sendOneNear()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
+      sendOneNear
+    </div>
   </div>
 </template>
 
 <script>
 const nearAPI = require("near-api-js");
-const { connect, KeyPair, keyStores, WalletConnection } = nearAPI;
+const { connect, KeyPair, keyStores, WalletConnection, utils } = nearAPI;
 
 // const homedir = require("os").homedir();
 // const CREDENTIALS_DIR = ".near-credentials";
@@ -76,6 +78,11 @@ const abi = {
     contractAddr: "nft.artpay.testnet",
     viewMethods: ["nft_metadata", "nft_token", "get_n_tokens"],
     changeMethods: ["nft_mint"],
+  },
+  escrow: {
+    contractAddr: "escrow.artpay.testnet",
+    viewMethods: ["get_escrow"],
+    changeMethods: ["release_escrow", "contractor_approval", "client_approval", "create_new_escrow", "take_my_money"],
   }
 }
 
@@ -156,12 +163,12 @@ export default {
       console.log(await contract.get_n_tokens());
     },
     async viewNFTToken() {
-      const contract = this.loadNFTContract();
+      const contract = this.loadNFTContract('nft');
       console.log(await contract.nft_token( { token_id: this.tokenId.toString() } ));
     },
     async mintNFT() {
       console.log("Minting NFT ...");
-      const contract = this.loadNFTContract();
+      const contract = this.loadNFTContract('nft');
       const response = await contract.nft_mint( 
         {
           receiver_id: this.wallet.getAccountId(),
@@ -175,13 +182,26 @@ export default {
       );
       console.log(response); 
     },
-    loadNFTContract() {
+    async sendOneNear() {
+      console.log("Sending One NEAR ...")
+      const contract = this.loadNFTContract('escrow');
+      const value = utils.format.parseNearAmount("1");
+      const gas = utils.format.parseNearAmount("0.0000000003");
+      const response = await contract.take_my_money(
+        {},
+        gas, // attached GAS (optional)
+        value // unit: yoctoNEAR 
+      );
+      console.log(response);
+
+    },
+    loadNFTContract(contract) {
       return new nearAPI.Contract(
         this.wallet.account(),
-        abi.nft.contractAddr,
+        abi[contract].contractAddr,
         {
-          viewMethods: abi.nft.viewMethods,
-          changeMethods: abi.nft.changeMethods,
+          viewMethods: abi[contract].viewMethods,
+          changeMethods: abi[contract].changeMethods,
           sender: this.wallet.getAccountId(), 
         }
       )
