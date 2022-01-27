@@ -1,48 +1,60 @@
 <template>
-  <div class="">
-    <h1>{{ msg }}</h1>
-    <template v-if="!accountId">
-      <div @click="login()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-        Login with NEAR Wallet
+  <div class="my-5">
+    <h1 class="font-bold text-center">{{ msg }}</h1>
+    <div>
+      {{ nftOutput }}
+    </div>
+    <div class="container mx-auto p-16">
+      <div class="grid grid-rows-3 grid-flow-col gap-4">
+        <div class="row-span-3 border rounded-md px-7">
+          <h1 class="font-bold">ArtPay NFT</h1>
+          <template v-if="!accountId">
+            Login to continue!
+          </template>
+          <template v-else>
+            <div @click="getMetaData()" :class="btnStyle">
+              getMetaData
+            </div>
+            <div @click="mintNFT()" :class="btnStyle">
+              mintNFT
+            </div>
+            <input v-model="tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Search for anything..." type="text" name="search"/>
+            <div @click="viewNFTToken()" :class="btnStyle">
+              viewNFTToken
+            </div>
+          </template>
+        </div>
+        <div class="col-span-2 border rounded-md px-7">
+          <h1 class="font-bold">NEAR Wallet</h1>
+          <template v-if="!accountId">
+            <div @click="login()" :class="btnStyle">
+              Login with NEAR Wallet
+            </div>
+          </template>
+          <template v-else>
+            <div @click="logout()" :class="btnStyle">
+              {{ accountId }} Logout
+            </div>
+
+            <div @click="getWallet()" :class="btnStyle">
+              Get Account Details
+            </div>
+            <p class="text-sm">See Console</p>
+
+            <div @click="sendOneNear()" :class="btnStyle">
+              Donate One Near to ArtPay
+            </div>
+          </template>
+        </div>
+        <div class="row-span-2 col-span-2 border rounded-md px-7">
+          <h1 class="font-bold">ArtPay Escrow</h1>
+          <input v-model="tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Search for anything..." type="text" name="search"/>
+          <div @click="setNFTDeliverable()" :class="btnStyle">
+            setNFTDeliverable
+          </div>
+          <p class="text-sm">This will transfer owner_id of NFT to escrow.artpay.testnet</p>
+        </div>
       </div>
-    </template>
-    <template v-else>
-      <div @click="logout()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-        {{ accountId }} Logout
-      </div>
-
-      <div @click="getWallet()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-        getAccountDetails
-      </div>
-      <!-- <div @click="createFullAccessKey()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-        Generate Full Access Key
-      </div> -->
-    </template>
-
-    <h1>NFT ArtPay</h1>
-    <!-- <div @click="loadContract()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-      loadContract
-    </div> -->
-
-    <div @click="getMetaData()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-      getMetaData
-    </div>
-
-    <div @click="mintNFT()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-      mintNFT
-    </div>
-
-    <input type="text" v-model="tokenId" />
-    <div @click="viewNFTToken()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-      viewNFTToken
-    </div>
-
-    <div @click="getNumberOfToken()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-      getNumberOfToken
-    </div>
-
-    <div @click="sendOneNear()" class="py-3 px-7 m-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150">
-      sendOneNear
     </div>
   </div>
 </template>
@@ -77,7 +89,7 @@ const abi = {
   nft: {
     contractAddr: "nft.artpay.testnet",
     viewMethods: ["nft_metadata", "nft_token", "get_n_tokens"],
-    changeMethods: ["nft_mint"],
+    changeMethods: ["nft_mint", "allowance", "nft_transfer"],
   },
   escrow: {
     contractAddr: "escrow.artpay.testnet",
@@ -90,13 +102,14 @@ export default {
   name: "HelloWorld",
   data() {
     return {
-      msg: "Wallet",
+      msg: "ArtPay",
       near: null,
       accountId: null,
       wallet: null,
 
       // nft
       tokenId: 0,
+      nftOutput: null
     }
   },
   methods: {
@@ -137,50 +150,50 @@ export default {
       await keyStore.setKey(config.networkId, publicKey, keyPair);
       await account.addKey(publicKey);
     },
-    // async loadContract() {
-    //   const contract = new nearAPI.Contract(
-    //     this.wallet.account(),
-    //     abi.greeter.contractAddr,
-    //     {
-    //       viewMethods: abi.greeter.viewMethods,
-    //       changeMethods: abi.greeter.changeMethods,
-    //       sender: this.wallet.getAccountId(), 
-    //     }
-    //   );
-    //   console.log(contract);
-    //   console.log(await contract.get_greeting( { account_id: "rafaam.testnet", } ));
-    // },
     async getMetaData() {
-      // near-cli equvilant
-      // near call $ID nft_mint '{"token_id": "0", "receiver_id": "'$ID'", "token_metadata": { "title": "Some Art", "description": "My NFT media", "media": "https://bafkreiabag3ztnhe5pg7js4bj6sxuvkz3sdf76cjvcuqjoidvnfjz7vwrq.ipfs.dweb.link/", "copies": 1}}' --accountId $ID --deposit 0.1
-      const contract = this.loadNFTContract();
-      console.log(await contract.nft_metadata());
+     
+      const contract = this.loadNFTContract("nft");
+      this.nftOutput = await contract.nft_metadata();
     },
     async getNumberOfToken() {
-      // near-cli equvilant
-      // near call $ID nft_mint '{"token_id": "0", "receiver_id": "'$ID'", "token_metadata": { "title": "Some Art", "description": "My NFT media", "media": "https://bafkreiabag3ztnhe5pg7js4bj6sxuvkz3sdf76cjvcuqjoidvnfjz7vwrq.ipfs.dweb.link/", "copies": 1}}' --accountId $ID --deposit 0.1
-      const contract = this.loadNFTContract();
+      const contract = this.loadNFTContract("nft");
       console.log(await contract.get_n_tokens());
     },
     async viewNFTToken() {
+      console.log("HERE");
       const contract = this.loadNFTContract('nft');
-      console.log(await contract.nft_token( { token_id: this.tokenId.toString() } ));
+      this.nftOutput = await contract.nft_token( { token_id: this.tokenId.toString() } );
     },
     async mintNFT() {
-      console.log("Minting NFT ...");
       const contract = this.loadNFTContract('nft');
+      const y = utils.format.formatNearAmount("5460000000000000000000");
+      console.log(y);
       const response = await contract.nft_mint( 
         {
           receiver_id: this.wallet.getAccountId(),
-          token_metadata: { 
-            title: "Olympus Mons", 
-            description: "Tallest mountain in charted solar system", 
-            media: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Olympus_Mons_alt.jpg/1024px-Olympus_Mons_alt.jpg", 
+          token_id: `token-${Math.floor(Math.random() * 1000000000)}`,
+          metadata: { 
+            title: "ArtPay", 
+            description: "Example ArtPay NFT!", 
+            media: "URL", 
             copies: 1
           }
-        }
+        },
+        null,
+        utils.format.parseNearAmount(y),
       );
-      console.log(response); 
+      this.nftOutput = `Token minted as: ${response}`;
+    },
+    async setNFTDeliverable() {
+      // # near call $NFTACCOUNT nft_transfer '{"receiver_id": "rafaam.testnet", "token_id": "token-1", "approval_id": 2, "msg": "foo"}' --accountId $NFTACCOUNT --depositYocto 1 --gas 200000000000000
+      console.log("Sending One NEAR ...")
+      // const contractEscrow = this.loadNFTContract('escrow');
+      const contractNFT = this.loadNFTContract('nft');
+      this.nftOutput = await contractNFT.nft_transfer(
+        { receiver_id: "escrow.artpay.testnet", token_id: this.tokenId.toString(), approval_id: 2, msg: "For ArtPay Escrow" },
+        200000000000000,
+        1
+      );
     },
     async sendOneNear() {
       console.log("Sending One NEAR ...")
@@ -193,7 +206,6 @@ export default {
         value // unit: yoctoNEAR 
       );
       console.log(response);
-
     },
     loadNFTContract(contract) {
       return new nearAPI.Contract(
@@ -207,7 +219,12 @@ export default {
       )
     }
   },
-  mounted() { this.init(); }
+  mounted() { this.init(); },
+  computed: {
+    btnStyle: function () {
+      return "py-3 px-7 my-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150"
+    },
+  }
 }
 </script>
 

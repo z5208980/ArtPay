@@ -19,8 +19,8 @@ deploy_contract() {
 
 main() {
     cargo build --target wasm32-unknown-unknown --release       # Compile
-    # reset_sub_account   # Make subaccount for new contract
-    # deploy_contract     # deploy contract to fresh subaccount
+    reset_sub_account   # Make subaccount for new contract
+    deploy_contract     # deploy contract to fresh subaccount
 }
 
 main
@@ -40,3 +40,6 @@ main
 # near view $NFTACCOUNT nft_metadata
 # near call $NFTACCOUNT nft_mint '{"receiver_id": "'$MASTERACCOUNT'", "token_metadata": {"title": "My Non Fungible Team Token", "description": "The Team Most Certainly Goes :)", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif"} }' --accountId $MASTERACCOUNT --amount 0.1
 # near view $NFTACCOUNT nft_token '{"token_id": "3"}'
+
+# near view $NFTACCOUNT nft_token '{"token_id": "token-1"}'
+# near call $SUBACCOUNT set_nft_deliverable '{"nft_address": "nft.artpay.testnet", "token_id": "1"}' --accountId $MASTERACCOUNT --gas 2428077515380

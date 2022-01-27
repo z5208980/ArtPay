@@ -25,6 +25,17 @@ trait NonFungibleToken {
     fn nft_token(&self, token_id: String) -> Option<Token>;
 }
 
+#[ext_contract(nft_approve_interface)]
+trait NonFungibleTokenApprovalManagement: NonFungibleToken {
+    // change methods
+    fn nft_approve(&mut self, token_id: String, account_id: String, msg: Option<String>);
+    fn nft_revoke(&mut self, token_id: String, account_id: String);
+    fn nft_revoke_all(&mut self, token_id: String);
+
+    // view methods
+    fn nft_is_approved(&self, token_id: String, approved_account_id: String, approval_id: Option<u64>) -> bool;
+}
+
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Copy, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub enum EscrowState {
@@ -86,32 +97,26 @@ impl ArtPay {
         }
     }
 
-    // TESTING NFT TRANSFER
-    // TODO: https://docs.near.org/docs/tutorials/contracts/xcc-receipts
+    // REQUIRE FRONTEND APPROVAL FROM NFT OWNER
     pub fn set_nft_deliverable(&self, nft_address: AccountId,  token_id: TokenId,) -> Promise {
-        // receiver_id: String, token_id: String, approval_id: Option<u64>, memo: Option<String>
         nft_interface::nft_transfer(
             "escrow.artpay.testnet".to_string(), // give to this contract for locking
             token_id.clone(),
             Some(0),
-            Some("For Escrow ArtPay".to_string()),
+            Some("Transfer Escrow ArtPay".to_string()),
             &nft_address, // nft contract
-            0, // yocto NEAR to attach
-            5_000_000_000_000 // gas to attach
+            1, // yocto NEAR to attach
+            200000000000000 // gas to attach
         )
         .then(ext_self::my_callback(
             &env::current_account_id(), // this contract's account id
             0, // yocto NEAR to attach to the callback
-            5_000_000_000_000 // gas to attach to the callback
+            200000000000000 // gas to attach to the callback
         ))
     }
 
     pub fn my_callback(&self) -> String {
-        assert_eq!(
-            env::promise_results_count(),
-            1,
-            "This is a callback method"
-        );
+        assert_eq!( env::promise_results_count(), 1, "This is a callback method");
 
         // // handle the result from the cross contract call this method is a callback for
         // match env::promise_result(0) {
