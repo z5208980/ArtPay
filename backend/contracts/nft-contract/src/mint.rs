@@ -29,7 +29,7 @@ impl Contract {
         }
 
         //specify the token struct that contains the owner ID 
-        let token = Token {
+        let mut token = Token {
             //set the owner ID equal to the receiver ID passed into the function
             owner_id: receiver_id,
             //we set the approved account IDs to the default value (an empty map)
@@ -40,6 +40,12 @@ impl Contract {
             royalty,
         };
 
+        // ARTPAY: After set token, add "escrow.artpay.testnet" to approve for setting to escrow
+        let approval_id: u64 = token.next_approval_id;  // should be 0
+        let account_id: AccountId = "escrow.artpay.testnet".parse().unwrap();
+        token.approved_account_ids.insert(account_id.clone(), approval_id);
+        token.next_approval_id += 1;
+        
         //insert the token ID and token struct and make sure that the token doesn't exist
         assert!(
             self.tokens_by_id.insert(&token_id, &token).is_none(),
@@ -77,5 +83,9 @@ impl Contract {
 
         //refund any excess storage if the user attached too much. Panic if they didn't attach enough to cover the required.
         refund_deposit(required_storage_in_bytes);
+    }
+
+    pub fn str_to_account_id(&self, account_id: AccountId) -> AccountId {
+        account_id
     }
 }

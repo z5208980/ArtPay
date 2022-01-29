@@ -97,6 +97,31 @@ impl ArtPay {
         }
     }
 
+    pub fn cancel(&mut self, client: AccountId, id: u128) {
+        match self.get_escrow(client.clone(), id.clone()){
+            Some(mut escrow) => {
+                let account_id = env::signer_account_id();
+                assert!(escrow.client.clone() == account_id, "Not ownership of escrow to cancel");
+                nft_interface::nft_transfer(
+                    escrow.contractor.to_string(), 
+                    escrow.token_id.clone(),
+                    Some(0), Some("Transfer Escrow ArtPay".to_string()),
+                    &(escrow.nft_address), // nft contract
+                    1, 200000000000000 // deposit, gas
+                )
+                .then(ext_self::my_callback(&env::current_account_id(), 0, 200000000000000));
+
+                let to = escrow.client.clone();
+                Promise::new(to).transfer(escrow.locked_amount); 
+
+                escrow.locked_amount = 0;
+                escrow.escrow_state = EscrowState::CANCEL;
+                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
+            },
+            None => {},
+        };
+
+    }
     // REQUIRE FRONTEND APPROVAL FROM NFT OWNER
     pub fn set_nft_deliverable(&self, nft_address: AccountId,  token_id: TokenId,) -> Promise {
         nft_interface::nft_transfer(
@@ -108,30 +133,12 @@ impl ArtPay {
             1, // yocto NEAR to attach
             200000000000000 // gas to attach
         )
-        .then(ext_self::my_callback(
-            &env::current_account_id(), // this contract's account id
-            0, // yocto NEAR to attach to the callback
-            200000000000000 // gas to attach to the callback
-        ))
+        .then(ext_self::my_callback(&env::current_account_id(), 0, 200000000000000))
     }
 
-    pub fn my_callback(&self) -> String {
+    pub fn my_callback(&self) -> bool {
         assert_eq!( env::promise_results_count(), 1, "This is a callback method");
-
-        // // handle the result from the cross contract call this method is a callback for
-        // match env::promise_result(0) {
-        //     PromiseResult::NotReady => unreachable!(),
-        //     PromiseResult::Failed => "oops!".to_string(),
-        //     PromiseResult::Successful(result) => {
-        //         let balance = near_sdk::serde_json::from_slice::<U128>(&result).unwrap();
-        //         if balance.0 > 100000 {
-        //             "Wow!".to_string()
-        //         } else {
-        //             "Hmmmm".to_string()
-        //         }
-        //     },
-        // }
-        "Callback".to_string()
+        true
     }
 
     #[payable]
