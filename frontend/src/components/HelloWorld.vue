@@ -18,17 +18,26 @@
 
             <h2 class="font-bold">Mint new NFT</h2>
             <div class="py-2">Token ID</div>
-            <input v-model="newNFT.tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" type="text" />
+            <input v-model="newNFT.tokenId" :class="inputStyle" type="text" />
             <div class="py-2">Copyright</div>
-            <input v-model="newNFT.copyright" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Copyright Policy" type="textarea" />
-            
+            <textarea v-model="newNFT.copyright" :class="inputStyle" placeholder="Copyright Policy"/>
+            <div class="py-2">Composition or derivative work?</div>
+            <div v-for="(item, i) in newNFT.attributeParties" :key="i">
+              <input v-model="item.address" :class="inputStyle" /> %royalty <input v-model="item.value" :class="inputStyle" type="number" min="0" max="100" />
+              <button @click="deleteParty(index)" :class="btnStyle">
+              delete
+              </button>
+            </div>
+          <button @click="addParty" :class="btnStyle">
+            Add Party
+          </button>
             <div @click="mintNFT()" :class="btnStyle">
               mintNFT
             </div>
             <p class="text-sm"><b>Note</b> Minting will incur {{ MINT_PRICE }} yoctoNEAR. Reason: For storage</p>
 
             <h2 class="font-bold">View NFT</h2>
-            <input v-model="viewNFT.tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" type="text" />
+            <input v-model="viewNFT.tokenId" :class="inputStyle" type="text" />
             <div @click="viewNFTToken()" :class="btnStyle">
               viewNFTToken
             </div>
@@ -60,32 +69,46 @@
 
           <h2 class="font-bold">Create Escrow</h2>
           <div class="py-2">Contractor Address</div>
-          <input v-model="newEscrowFormData.contractor" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="contractor address" type="text"/>
-          <div class="py-2">NFT Address</div>
-          <input v-model="newEscrowFormData.nftAddress" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="NFT Address" type="text" />
-          <div class="py-2">Token TokenId</div>
-          <input v-model="newEscrowFormData.tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="TokenId for NFT" type="text" />
+          <input v-model="newEscrowFormData.contractor" :class="inputStyle" placeholder="contractor address" type="text"/>
+          <div class="py-2">Project Title</div>
+          <input v-model="newEscrowFormData.title" :class="inputStyle" placeholder="Title" type="text" />
+          <div class="py-2">Type</div>
+          <select v-model="newEscrowFormData.escrowType" :class="inputStyle">
+            <option value="1">Custom Artwork</option>
+            <option value="2">Artwork 1</option>
+            <option value="3">Free Artwork</option>
+            <option value="4">Artwork Custom</option>
+          </select>
+          <div class="py-2">description</div>
+          <input v-model="newEscrowFormData.description" :class="inputStyle" placeholder="Description" type="text" />
           <div class="py-2">Expiry Date</div>
-          <input v-model="newEscrowFormData.timestamp" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Expiry Date" type="date" />
+          <input v-model="newEscrowFormData.timestamp" :class="inputStyle" placeholder="Expiry Date" type="date" />
           <div class="py-2">Locked Funds (Near)</div>
-          <input v-model="newEscrowFormData.lockedFunds" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Funds in NEAR" type="number" step="0.01" />
+          <input v-model="newEscrowFormData.lockedFunds" :class="inputStyle" placeholder="Funds in NEAR" type="number" step="0.01" />
           <div @click="createEscrow()" :class="btnStyle">
             createEscrow
           </div>
           
           <h2 class="font-bold">setNFTDeliverable</h2>
-          <input v-model="escrowDeliverable.tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Search for anything..." type="text" />
+          <div class="py-2">Client</div>
+          <input v-model="escrowDeliverable.client" :class="inputStyle" placeholder="NFT Address" type="text" />
+          <div class="py-2">Escrow Id</div>
+          <input v-model="escrowDeliverable.escrowId" :class="inputStyle" placeholder="TokenId for NFT" type="text" />
+          <div class="py-2">NFT Address</div>
+          <input v-model="escrowDeliverable.nftAddress" :class="inputStyle" placeholder="NFT Address" type="text" />
+          <div class="py-2">Token TokenId</div>
+          <input v-model="escrowDeliverable.tokenId" :class="inputStyle" placeholder="TokenId for NFT" type="text" />          
           <div @click="setNFTDeliverable()" :class="btnStyle">
             setNFTDeliverable
           </div>
           <p class="text-sm">This will transfer owner_id of NFT to escrow.artpay.testnet</p>
 
 
-          <h2 class="font-bold">Create Escrow</h2>
+          <h2 class="font-bold">View Escrow</h2>
           <div class="py-2">Client Address</div>
-          <input v-model="viewEscrow.client" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Client escrow" type="text" />
+          <input v-model="viewEscrow.client" :class="inputStyle" placeholder="Client escrow" type="text" />
           <div class="py-2">Escrow ID</div>
-          <input v-model="viewEscrow.tokenId" class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm" placeholder="Escrow Id" type="text" />
+          <input v-model="viewEscrow.tokenId" :class="inputStyle" placeholder="Escrow Id" type="text" />
           <div @click="viewEscrowToken()" :class="btnStyle">
             viewEscrow
           </div>
@@ -121,7 +144,7 @@ const abi = {
   escrow: {
     contractAddr: "escrow.artpay.testnet",
     viewMethods: ["get_escrow"],
-    changeMethods: ["release_escrow", "contractor_approval", "client_approval", "create_new_escrow", "take_my_money"],
+    changeMethods: ["release_escrow", "contractor_approval", "client_approval", "create_new_escrow", "take_my_money", "set_deliverable", "set_nft_deliverable"],
   }
 }
 
@@ -142,25 +165,31 @@ export default {
       newNFT: {
         tokenId: "token-1",
         copyright: "Copyright © 2022 ArtPay all rights reserved. See URL for more information.",
+        attributeParties: []
       },
       viewNFT: {
         tokenId: "token-1",
-
       },
 
       // escrow
       newEscrowFormData: {
         contractor: "example.tesnet",
-        nftAddress: "escrow.artpay.testnet",
-        tokenId: "token-1",
+        // nftAddress: "escrow.artpay.testnet",
+        // tokenId: "token-1",
         timestamp: new Date().toISOString().slice(0, 10),
         lockedFunds: 0,
+        title: "Project Title",
+        description: "description",
+        escrowType: "1",
       },
       escrowDeliverable: {
+        client: "artpay.testnet",
+        escrowId: "1",
+        nftAddress: "nft.artpay.testnet",
         tokenId: "token-1",
       },
       viewEscrow: {
-        client: "escrow.artpay.testnet",
+        client: "artpay.testnet",
         tokenId: "1",
       },
     }
@@ -202,6 +231,11 @@ export default {
       this.globalMessage = response ? response : `${this.viewNFT.tokenId} doesn't exist for NFT`;
     },
     async mintNFT() {
+      let attributeParties = {}
+      for (let i of this.newNFT.attributeParties) {
+        attributeParties[i.address] = i.value;
+      }
+      console.log(attributeParties);
       const contract = this.loadNFTContract('nft');
       const response = await contract.nft_mint( 
         {
@@ -213,13 +247,15 @@ export default {
             media: "IPFS URL / URL", 
             copies: 1,
             copyright: this.newNFT.copyright// IMPORTANT FOR ARTPAY NFT
-          }
+          },
+          perpetual_royalties: attributeParties,
         },
         this.MAX_GAS, this.MINT_PRICE,
       );
       this.globalMessage = `Token minted as: ${response}`;
     },
     async createEscrow() {
+      // See https://docs.near.org/docs/tutorials/contracts/nfts/royalty#creating-a-sub-account for royalty
       let expiryDate = new Date(this.newEscrowFormData.timestamp);
       const contractNFT = this.loadNFTContract('escrow');
       await contractNFT.create_new_escrow(
@@ -228,15 +264,29 @@ export default {
           nft_address: this.newEscrowFormData.nftAddress,
           token_id: this.newEscrowFormData.tokenId,
           timestamp: expiryDate.getTime(),
+          title: this.newEscrowFormData.title,
+          escrow_type: this.newEscrowFormData.escrowType,
+          description: this.newEscrowFormData.description,
+          // attribute_parties: attributeParties, 
         },
       );
     },
     async setNFTDeliverable() {
-      const contractNFT = this.loadNFTContract('nft');
-      this.globalMessage = await contractNFT.nft_transfer(
-        { receiver_id: "escrow.artpay.testnet", token_id: this.escrowDeliverable.tokenId.toString(), approval_id: 2, msg: "For ArtPay Escrow" },
-        200000000000000, 1
+      // const contractNFT = this.loadNFTContract('nft');
+      // this.globalMessage = await contractNFT.nft_transfer(
+      //   { receiver_id: "escrow.artpay.testnet", token_id: this.escrowDeliverable.tokenId.toString(), approval_id: 2, msg: "For ArtPay Escrow" },
+      //   this.MAX_GAS, 1
+      // );
+      this.globalMessage = `Setting Deliverable ...`;
+      const contractEscrow = this.loadNFTContract('escrow');
+      // this.globalMessage = await contractNFT.set_nft_deliverable(
+      this.globalMessage = await contractEscrow.set_deliverable(
+        { 
+          client: this.escrowDeliverable.client, id: Number(this.escrowDeliverable.escrowId),
+          nft_address: this.escrowDeliverable.nftAddress, token_id: this.escrowDeliverable.tokenId
+        },
       );
+      this.globalMessage = `NFT setted to ${this.escrowDeliverable.client}'s ${this.escrowDeliverable.escrowId} Escrow!`;
     },
     async viewEscrowToken() {
       this.globalMessage = `Getting Escrow`;
@@ -264,12 +314,21 @@ export default {
           sender: this.wallet.getAccountId(), 
         }
       )
+    },
+    addParty: function () {
+      this.newNFT.attributeParties.push({ address: '', value: 0 });
+    },
+    deleteParty: function (index) {
+      this.newNFT.attributeParties.splice(index, 1);
     }
   },
   mounted() { this.init(); },
   computed: {
     btnStyle: function () {
       return "py-3 px-7 my-2 text-white transition-color rounded-md bg-indigo-600 hover:bg-indigo-700 duration-150"
+    },
+    inputStyle: function () {
+      return "placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-slate-300 rounded-md py-2 pl-9 pr-3 shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500 focus:ring-1 sm:text-sm";
     },
   }
 }

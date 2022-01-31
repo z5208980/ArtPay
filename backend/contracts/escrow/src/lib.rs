@@ -1,19 +1,29 @@
+/*
+    Future works:
+    - See, https://docs.near.org/docs/api/naj-cookbook#wrap-and-unwrap-near for NEAR to wNEAR
+    - Integrate expiry system, using
+        use std::time::SystemTime;   // Will need to getting over due escrows
+        SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).as_sec();
+
+*/
+
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Serialize, Deserialize};
 use near_sdk::{
     env, near_bindgen, AccountId, setup_alloc, PanicOnDefault,
-    Promise,
-    // json_types::U128,
+    Promise, ext_contract, Gas
 };
-// use near_sdk::collections::LookupMap;
 use std::collections::HashMap;
-// use std::time::SystemTime;   // Will need to getting over due escrows
-//  SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).as_sec();
 use near_contract_standards::non_fungible_token::{TokenId}; 
 
-use near_sdk::{ext_contract};
-
 setup_alloc!();
+
+// Gas needed for common operations.
+pub const GAS_FOR_COMMON_OPERATIONS: Gas = 300_000_000_000_000 ;
+
+// Gas reserved for the current call.
+pub const GAS_RESERVED_FOR_CURRENT_CALL: Gas = 20_000_000_000_000;
+pub const CALLBACK_GAS: Gas = 5_000_000_000_000;
 
 #[ext_contract(nft_interface)]
 trait NonFungibleToken {
@@ -64,6 +74,12 @@ pub struct Escrow {
 
     timestamp: u128, // epoch_time
     escrow_state: EscrowState,
+
+    // escrow metadata
+    title: String,
+    escrow_type: String,
+    description: String,
+    // attribute_parties: HashMap<AccountId, u32>,   // Note this is not reflective of the NFT, rather documentation for what it should be.
 }
 
 #[ext_contract(ext_self)]
@@ -122,19 +138,60 @@ impl ArtPay {
         };
 
     }
+
     // REQUIRE FRONTEND APPROVAL FROM NFT OWNER
-    pub fn set_nft_deliverable(&self, nft_address: AccountId,  token_id: TokenId,) -> Promise {
-        nft_interface::nft_transfer(
+    pub fn set_nft_deliverable(&self, nft_address: AccountId, token_id: TokenId,) -> Promise {
+        let call = nft_interface::nft_transfer(
             "escrow.artpay.testnet".to_string(), // give to this contract for locking
             token_id.clone(),
             Some(0),
             Some("Transfer Escrow ArtPay".to_string()),
             &nft_address, // nft contract
-            1, // yocto NEAR to attach
-            200000000000000 // gas to attach
-        )
-        .then(ext_self::my_callback(&env::current_account_id(), 0, 200000000000000))
+            0, // yocto NEAR to attach
+            GAS_FOR_COMMON_OPERATIONS // gas to attach
+        );
+        let remaining_gas: Gas = env::prepaid_gas()
+        - env::used_gas()
+        - GAS_FOR_COMMON_OPERATIONS
+        - GAS_RESERVED_FOR_CURRENT_CALL;
+        let callback = ext_self::my_callback(
+            &env::current_account_id(),
+            0,
+            remaining_gas
+        );
+
+        call.then(callback)
     }
+    // pub fn set_nft_deliverable(&mut self, 
+    //     // client: AccountId, id: u128,
+    //     nft_address: AccountId, token_id: TokenId
+    // ) -> Promise {
+    //     let call = nft_interface::nft_transfer(
+    //         "escrow.artpay.testnet".to_string(), // give to this contract for locking
+    //         token_id.clone(),
+    //         Some(0),
+    //         Some("Transfer Escrow ArtPay".to_string()),
+    //         &nft_address,
+    //         0, GAS_FOR_COMMON_OPERATIONS // desposit, gas
+    //     );
+
+    //     // let remaining_gas: Gas = env::prepaid_gas()
+    //     // - env::used_gas()
+    //     // - GAS_FOR_COMMON_OPERATIONS
+    //     // - GAS_RESERVED_FOR_CURRENT_CALL;
+    //     let callback = ext_self::my_callback(
+    //         &env::current_account_id(),
+    //         0, GAS_FOR_COMMON_OPERATIONS
+    //     );
+
+    //     let response = call.then(callback);
+    //     // .then(ext_self::my_callback(&env::current_account_id(), 0, 30000000000000));
+
+    //     // self.set_deliverable(client.clone(), id, nft_address.clone(), token_id);
+    //     // self.client_approval(client.clone(), id);
+
+    //     response
+    // }
 
     pub fn my_callback(&self) -> bool {
         assert_eq!( env::promise_results_count(), 1, "This is a callback method");
@@ -145,9 +202,14 @@ impl ArtPay {
     pub fn create_new_escrow(
         &mut self, 
         contractor: AccountId, 
-        nft_address: AccountId, 
-        token_id: TokenId,
+        // nft_address: AccountId, 
+        // token_id: TokenId,
         timestamp: u128,
+        // escrow metadata
+        title: String,
+        escrow_type: String,
+        description: String,
+        // attribute_parties: Option<HashMap<AccountId, u128>>,     // will include code from mint.rs
     ) -> u128 {
         let account_id = env::signer_account_id(); // msg.sender
         
@@ -168,10 +230,14 @@ impl ArtPay {
             locked_amount: near_sdk::env::attached_deposit(),
             client_approval: false,
             contractor_approval: false,
-            nft_address,
-            token_id,
+            nft_address: "".to_string(),
+            token_id: "".to_string(),
             timestamp, 
             escrow_state: EscrowState::AWAITING,
+            title,
+            escrow_type,
+            description,
+            // attribute_parties,
         });
 
         // Use env::log to record logs permanently to the blockchain!
@@ -204,6 +270,25 @@ impl ArtPay {
                     self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
                     return true;
                 };
+               return false;
+            },
+            None => return false,
+        };
+    }
+
+    pub fn set_deliverable(&mut self, 
+        client: AccountId, id: u128,
+        nft_address: AccountId, token_id: TokenId
+    ) -> bool {
+        match self.get_escrow(client.clone(), id.clone()){
+            Some(mut escrow) => {
+                let account_id = env::signer_account_id();
+                if account_id == escrow.contractor {
+                    escrow.nft_address = nft_address;
+                    escrow.token_id = token_id;
+                    self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
+                    return true;
+                }
                return false;
             },
             None => return false,
