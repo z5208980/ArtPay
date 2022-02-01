@@ -1,5 +1,20 @@
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+// use near_sdk::serde::{Serialize, Deserialize};
+
 use crate::*;
 pub type TokenId = String;
+
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Copy, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub enum Assign {
+    BYND, 
+    BYNC, 
+    BYSA, 
+    BYNCND, 
+    BYNCSA, 
+    FULL,
+}
+
 //defines the payout type we'll be returning as a part of the royalty standards.
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -37,7 +52,8 @@ pub struct TokenMetadata {
 
     // Copyright
     pub copyright: Option<String>, // URL to an off-chain JSON file with more info.
-    pub copyright_hash: Option<Base64VecU8>, // Base64-encoded sha256 hash of JSON from reference field. Required if `reference` is included.
+    pub right_assign: Option<Assign>,
+    // pub right_assign: Option<String>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -77,5 +93,13 @@ pub trait NonFungibleTokenMetadata {
 impl NonFungibleTokenMetadata for Contract {
     fn nft_metadata(&self) -> NFTContractMetadata {
         self.metadata.get().unwrap()
+    }
+}
+
+impl TokenMetadata {
+    pub fn assert_valid(&self) -> bool {
+        if let None = self.copyright { return false; }
+        if let None = self.right_assign { return false; }
+        true
     }
 }

@@ -28,6 +28,11 @@ impl Contract {
             }
         }
 
+        assert!(
+            metadata.assert_valid(),
+            "Metadata requires Copyright with assignments"
+        );
+
         //specify the token struct that contains the owner ID 
         let mut token = Token {
             //set the owner ID equal to the receiver ID passed into the function

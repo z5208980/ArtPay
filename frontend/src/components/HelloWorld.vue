@@ -15,12 +15,18 @@
             <div @click="getMetaData()" :class="btnStyle">
               getMetaData
             </div>
+            rightAssign
 
             <h2 class="font-bold">Mint new NFT</h2>
             <div class="py-2">Token ID</div>
             <input v-model="newNFT.tokenId" :class="inputStyle" type="text" />
             <div class="py-2">Copyright</div>
             <textarea v-model="newNFT.copyright" :class="inputStyle" placeholder="Copyright Policy"/>
+            <select v-model="newNFT.rightAssign" :class="inputStyle">
+              <option v-for="(item, i) in rightAssign" :key="i" value="item">
+                {{item}}
+              </option>
+            </select>
             <div class="py-2">Composition or derivative work?</div>
             <div v-for="(item, i) in newNFT.attributeParties" :key="i">
               <input v-model="item.address" :class="inputStyle" /> %royalty <input v-model="item.value" :class="inputStyle" type="number" min="0" max="100" />
@@ -160,11 +166,13 @@ export default {
       wallet: null,
       globalMessage: null,
       urlParams: null,
+      rightAssign: ["BYND", "BYNC", "BYSA", "BYNCND", "BYNCSA", "FULL"],
 
       // nft
       newNFT: {
         tokenId: "token-1",
         copyright: "Copyright © 2022 ArtPay all rights reserved. See URL for more information.",
+        rightAssign: "BYND",
         attributeParties: []
       },
       viewNFT: {
@@ -246,7 +254,8 @@ export default {
             description: "Example ArtPay NFT!", 
             media: "IPFS URL / URL", 
             copies: 1,
-            copyright: this.newNFT.copyright// IMPORTANT FOR ARTPAY NFT
+            copyright: this.newNFT.copyright, // IMPORTANT FOR ARTPAY NFT
+            right_assign: this.newNFT.rightAssign, // IMPORTANT FOR ARTPAY NFT
           },
           perpetual_royalties: attributeParties,
         },
