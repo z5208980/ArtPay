@@ -280,6 +280,15 @@ impl ArtPay {
                 if escrow.client_approval && escrow.contractor_approval {
                     let to = escrow.contractor.clone();
                     Promise::new(to).transfer(escrow.locked_amount); // FUNDS RELEASED HERE! pay to contractor the locked funds of this escrow
+                    nft_interface::nft_transfer(
+                        escrow.client.to_string(), 
+                        escrow.token_id.clone(),
+                        Some(0), Some("Transfer Escrow ArtPay".to_string()),
+                        &(escrow.nft_address), // nft contract
+                        1, MAX_GAS // deposit, gas
+                    )
+                    .then(ext_self::my_callback(&env::current_account_id(), 0, MAX_GAS));
+
                     escrow.locked_amount = 0;
                     escrow.escrow_state = EscrowState::COMPLETE;
                     self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);

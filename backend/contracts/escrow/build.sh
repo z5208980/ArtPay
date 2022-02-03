@@ -46,3 +46,5 @@ near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
 near call $SUBACCOUNT get_escrow '{"client": "'$MASTERACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
 near call $SUBACCOUNT cancel '{"client": "'$MASTERACCOUNT'", "id": 0}' --accountId $MASTERACCOUNT --gas 200000000000000 # --depositYocto 1
 near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
+
+near call $SUBACCOUNT get_all_escrow '{"client": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT
