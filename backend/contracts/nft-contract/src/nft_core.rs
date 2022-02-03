@@ -21,8 +21,6 @@ pub trait NonFungibleTokenCore {
     /// Returns `true` if the token was transferred from the sender's account.
     fn nft_transfer_call(
         &mut self,
-        client: AccountId,
-        escrow_id: u128,
         receiver_id: AccountId,
         token_id: TokenId,
         //we introduce an approval ID so that people with that approval ID can transfer the token
@@ -41,8 +39,6 @@ trait NonFungibleTokenReceiver {
     /// Returns `true` if the token should be returned back to the sender.
     fn nft_on_transfer(
         &mut self,
-        client: AccountId,
-        escrow_id: u128,
         sender_id: AccountId,
         previous_owner_id: AccountId,
         token_id: TokenId,
@@ -129,8 +125,6 @@ impl NonFungibleTokenCore for Contract {
     #[payable]
     fn nft_transfer_call(
         &mut self,
-        client: AccountId,
-        escrow_id: u128,
         receiver_id: AccountId,
         token_id: TokenId,
         //we introduce an approval ID so that people with that approval ID can transfer the token
@@ -177,8 +171,6 @@ impl NonFungibleTokenCore for Contract {
 
         // Initiating receiver's call and the callback
         ext_non_fungible_token_receiver::nft_on_transfer(
-            client,
-            escrow_id,
             sender_id,
             previous_token.owner_id.clone(),
             token_id.clone(),
@@ -255,68 +247,68 @@ impl NonFungibleTokenResolver for Contract {
                 }
             }
         }
+
+        //get the token object if there is some token object
+        let mut token = if let Some(token) = self.tokens_by_id.get(&token_id) {
+            if token.owner_id != receiver_id {
+                //we refund the owner for releasing the storage used up by the approved account IDs
+                refund_approved_account_ids(owner_id, &approved_account_ids);
+                // The token is not owner by the receiver anymore. Can't return it.
+                return true;
+            }
+            token
+        //if there isn't a token object, it was burned and so we return true
+        } else {
+            //we refund the owner for releasing the storage used up by the approved account IDs
+            refund_approved_account_ids(owner_id, &approved_account_ids);
+            return true;
+        };
+
+        //we remove the token from the receiver
+        self.internal_remove_token_from_owner(&receiver_id.clone(), &token_id);
+        //we add the token to the original owner
+        self.internal_add_token_to_owner(&owner_id, &token_id);
+
+        //we change the token struct's owner to be the original owner 
+        token.owner_id = owner_id.clone();
+
+        //we refund the receiver any approved account IDs that they may have set on the token
+        refund_approved_account_ids(receiver_id.clone(), &token.approved_account_ids);
+        //reset the approved account IDs to what they were before the transfer
+        token.approved_account_ids = approved_account_ids;
+
+        //we inset the token back into the tokens_by_id collection
+        self.tokens_by_id.insert(&token_id, &token);
+
+        /*
+            We need to log that the NFT was reverted back to the original owner.
+            The old_owner_id will be the receiver and the new_owner_id will be the
+            original owner of the token since we're reverting the transfer.
+        */
+        let nft_transfer_log: EventLog = EventLog {
+            // Standard name ("nep171").
+            standard: NFT_STANDARD_NAME.to_string(),
+            // Version of the standard ("nft-1.0.0").
+            version: NFT_METADATA_SPEC.to_string(),
+            // The data related with the event stored in a vector.
+            event: EventLogVariant::NftTransfer(vec![NftTransferLog {
+                // The optional authorized account ID to transfer the token on behalf of the old owner.
+                authorized_id,
+                // The old owner's account ID.
+                old_owner_id: receiver_id.to_string(),
+                // The account ID of the new owner of the token.
+                new_owner_id: owner_id.to_string(),
+                // A vector containing the token IDs as strings.
+                token_ids: vec![token_id.to_string()],
+                // An optional memo to include.
+                memo,
+            }]),
+        };
+
+        //we perform the actual logging
+        env::log_str(&nft_transfer_log.to_string());
+
+        //return false
         false
-        // //get the token object if there is some token object
-        // let mut token = if let Some(token) = self.tokens_by_id.get(&token_id) {
-        //     if token.owner_id != receiver_id {
-        //         //we refund the owner for releasing the storage used up by the approved account IDs
-        //         refund_approved_account_ids(owner_id, &approved_account_ids);
-        //         // The token is not owner by the receiver anymore. Can't return it.
-        //         return true;
-        //     }
-        //     token
-        // //if there isn't a token object, it was burned and so we return true
-        // } else {
-        //     //we refund the owner for releasing the storage used up by the approved account IDs
-        //     refund_approved_account_ids(owner_id, &approved_account_ids);
-        //     return true;
-        // };
-
-        // //we remove the token from the receiver
-        // self.internal_remove_token_from_owner(&receiver_id.clone(), &token_id);
-        // //we add the token to the original owner
-        // self.internal_add_token_to_owner(&owner_id, &token_id);
-
-        // //we change the token struct's owner to be the original owner 
-        // token.owner_id = owner_id.clone();
-
-        // //we refund the receiver any approved account IDs that they may have set on the token
-        // refund_approved_account_ids(receiver_id.clone(), &token.approved_account_ids);
-        // //reset the approved account IDs to what they were before the transfer
-        // token.approved_account_ids = approved_account_ids;
-
-        // //we inset the token back into the tokens_by_id collection
-        // self.tokens_by_id.insert(&token_id, &token);
-
-        // /*
-        //     We need to log that the NFT was reverted back to the original owner.
-        //     The old_owner_id will be the receiver and the new_owner_id will be the
-        //     original owner of the token since we're reverting the transfer.
-        // */
-        // let nft_transfer_log: EventLog = EventLog {
-        //     // Standard name ("nep171").
-        //     standard: NFT_STANDARD_NAME.to_string(),
-        //     // Version of the standard ("nft-1.0.0").
-        //     version: NFT_METADATA_SPEC.to_string(),
-        //     // The data related with the event stored in a vector.
-        //     event: EventLogVariant::NftTransfer(vec![NftTransferLog {
-        //         // The optional authorized account ID to transfer the token on behalf of the old owner.
-        //         authorized_id,
-        //         // The old owner's account ID.
-        //         old_owner_id: receiver_id.to_string(),
-        //         // The account ID of the new owner of the token.
-        //         new_owner_id: owner_id.to_string(),
-        //         // A vector containing the token IDs as strings.
-        //         token_ids: vec![token_id.to_string()],
-        //         // An optional memo to include.
-        //         memo,
-        //     }]),
-        // };
-
-        // //we perform the actual logging
-        // env::log_str(&nft_transfer_log.to_string());
-
-        // //return false
-        // false
     }
 }

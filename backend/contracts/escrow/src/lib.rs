@@ -18,16 +18,7 @@ use near_contract_standards::non_fungible_token::{TokenId};
 
 setup_alloc!();
 
-// Gas needed for common operations.
 const MAX_GAS: Gas = 30_000_000_000_000 ;
-
-// // Gas reserved for the current call.
-// const GAS_RESERVED_FOR_CURRENT_CALL: Gas = 20_000_000_000_000;
-// const CALLBACK_GAS: Gas = 5_000_000_000_000;
-
-// const GAS_FOR_RESOLVE_TRANSFER: Gas = 10_000_000_000_000;
-// const GAS_FOR_NFT_TRANSFER_CALL: Gas = 25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER;
-// const MIN_GAS_FOR_NFT_TRANSFER_CALL: Gas = 100_000_000_000_000;
 const NO_DEPOSIT: Balance = 0;
 
 #[ext_contract(nft_interface)]
@@ -130,7 +121,7 @@ impl ArtPay {
                     &(escrow.nft_address), // nft contract
                     1, MAX_GAS // deposit, gas
                 )
-                .then(ext_self::my_callback(&env::current_account_id(), 0, 200000000000000));
+                .then(ext_self::my_callback(&env::current_account_id(), 0, MAX_GAS));
 
                 let to = escrow.client.clone();
                 Promise::new(to).transfer(escrow.locked_amount); 
@@ -144,58 +135,34 @@ impl ArtPay {
 
     }
 
-    pub fn my_callback(&self) -> String {
+    pub fn my_callback(&self) -> bool {
         assert_eq!(env::promise_results_count(), 1, "This is a callback method");
-
-        // handle the result from the cross contract call this method is a callback for
         match env::promise_result(0) {
-            PromiseResult::NotReady => unreachable!(),
-            PromiseResult::Failed => "oops!".to_string(),
-            PromiseResult::Successful(_result) => "success".to_string(),
+            PromiseResult::NotReady => false,
+            PromiseResult::Failed => false,
+            PromiseResult::Successful(_result) => true,
         }
     }
-
-    /* When a deliverable is transfered to ESCROW then this is called to set the information to the escrow */
-    // pub fn nft_on_transfer(
-    //     &mut self,
-    //     client: AccountId,
-    //     escrow_id: u128,
-    //     sender_id: AccountId,
-    //     previous_owner_id: AccountId,
-    //     token_id: TokenId,
-    //     msg: String,
-    // ) -> bool {
-    //     let nft_address = env::signer_account_id(); // msg.sender
-    //     let ret = self.set_deliverable(client, escrow_id, nft_address, token_id);
-    //     ret
-    // }
 
     #[payable]   
     pub fn set_nft_deliverable(&mut self, 
         client: AccountId, id: u128,
         nft_address: AccountId, token_id: TokenId
     ) -> Promise {
+        if let Some(escrow) = self.get_escrow(client.clone(), id.clone()) {
+            assert!(escrow.nft_address == "".to_string(), "Deliverable already set");
+        }
+
         let call = nft_interface::nft_transfer(
-        // let call = nft_interface::nft_transfer_call(
             "escrow.artpay.testnet".to_string(), // give to this contract for locking
             token_id.clone(),
             Some(0),
             Some("Transfer Escrow ArtPay".to_string()),
-            // "something".to_string(),
             &nft_address,
-            1, //attached deposit
-            // env::prepaid_gas() - GAS_FOR_NFT_TRANSFER_CALL, //attached GAS
-            MAX_GAS
+            1, MAX_GAS
         );
 
-        if let mut escrow = self.get_escrow(client.clone(), id.clone()) {
-            assert!(escrow.nft_address != "".to_string(), "Deliverable already set");
-        }
-
-        let callback = ext_self::my_callback(
-            &env::current_account_id(), 0, MAX_GAS
-        );
-
+        let callback = ext_self::my_callback(&env::current_account_id(), NO_DEPOSIT, MAX_GAS);
         let response = call.then(callback);
 
         self.set_deliverable(client.clone(), id, nft_address.clone(), token_id);
@@ -276,19 +243,10 @@ impl ArtPay {
         };
     }
 
-    // pub fn cb_nft_ownership() -> String {
-    //     assert_eq!(env::promise_results_count(), 1, "This is a callback method");
-    //     if let PromiseResult::Successful(value) = env::promise_result(0) {
-    //         if let Ok(return_token) = near_sdk::serde_json::from_slice::<Token>(&value) {
-    //             return return_token.owner_id;
-    //         }
-    //     }
-    //     "".to_string()
-    // }
     /*
         Should be internal, ie. remove `pub`
     */
-    pub fn set_deliverable(&mut self, 
+    fn set_deliverable(&mut self, 
         client: AccountId, id: u128,
         nft_address: AccountId, token_id: TokenId
     ) -> bool {
