@@ -23,7 +23,7 @@
             <div class="py-2">Copyright</div>
             <textarea v-model="newNFT.copyright" :class="inputStyle" placeholder="Copyright Policy"/>
             <select v-model="newNFT.rightAssign" :class="inputStyle">
-              <option v-for="(item, i) in rightAssign" :key="i" value="item">
+              <option v-for="(item, i) in rightAssign" :key="i" :value="item">
                 {{item}}
               </option>
             </select>
@@ -243,7 +243,8 @@ export default {
       for (let i of this.newNFT.attributeParties) {
         attributeParties[i.address] = i.value;
       }
-      console.log(attributeParties);
+
+      console.log(this.newNFT.rightAssign);
       const contract = this.loadNFTContract('nft');
       const response = await contract.nft_mint( 
         {
@@ -276,26 +277,29 @@ export default {
           title: this.newEscrowFormData.title,
           escrow_type: this.newEscrowFormData.escrowType,
           description: this.newEscrowFormData.description,
-          // attribute_parties: attributeParties, 
-        },
+        }, this.MAX_GAS, this.newEscrowFormData.lockedFunds 
       );
     },
     async setNFTDeliverable() {
-      // const contractNFT = this.loadNFTContract('nft');
-      // this.globalMessage = await contractNFT.nft_transfer(
-      //   { receiver_id: "escrow.artpay.testnet", token_id: this.escrowDeliverable.tokenId.toString(), approval_id: 2, msg: "For ArtPay Escrow" },
-      //   this.MAX_GAS, 1
-      // );
-      this.globalMessage = `Setting Deliverable ...`;
-      const contractEscrow = this.loadNFTContract('escrow');
-      // this.globalMessage = await contractNFT.set_nft_deliverable(
-      this.globalMessage = await contractEscrow.set_deliverable(
-        { 
-          client: this.escrowDeliverable.client, id: Number(this.escrowDeliverable.escrowId),
-          nft_address: this.escrowDeliverable.nftAddress, token_id: this.escrowDeliverable.tokenId
-        },
+      const contractNFT = this.loadNFTContract('nft');
+      this.globalMessage = await contractNFT.nft_transfer(
+        { receiver_id: "escrow.artpay.testnet", token_id: this.escrowDeliverable.tokenId.toString(), approval_id: 0, msg: "For ArtPay Escrow" },
+        this.MAX_GAS, 1
       );
-      this.globalMessage = `NFT setted to ${this.escrowDeliverable.client}'s ${this.escrowDeliverable.escrowId} Escrow!`;
+
+      this.globalMessage.then(result => {
+        console.log(result);
+      });
+      // this.globalMessage = `Setting Deliverable ...`;
+      // const contractEscrow = this.loadNFTContract('escrow');
+      // // this.globalMessage = await contractNFT.set_nft_deliverable(
+      // this.globalMessage = await contractEscrow.set_deliverable(
+      //   { 
+      //     client: this.escrowDeliverable.client, id: Number(this.escrowDeliverable.escrowId),
+      //     nft_address: this.escrowDeliverable.nftAddress, token_id: this.escrowDeliverable.tokenId
+      //   },
+      // );
+      // this.globalMessage = `NFT setted to ${this.escrowDeliverable.client}'s ${this.escrowDeliverable.escrowId} Escrow!`;
     },
     async viewEscrowToken() {
       this.globalMessage = `Getting Escrow`;

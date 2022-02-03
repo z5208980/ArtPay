@@ -23,23 +23,23 @@ main() {
     deploy_contract     # deploy contract to fresh subaccount
 }
 
-main
+# main
 
 # CLI testing commands
-near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 1234423, "title": "project X", "description": "NFT project", "escrow_type": "1" }' --accountId $MASTERACCOUNT
-near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 1234234, "title": "project X", "description": "NFT project", "escrow_type": "1" }' --accountId $MASTERACCOUNT # --deposit 5
-near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "nft_address": "escrow.artpay.testnet", "token_id": "1", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1" }' --accountId $MASTERACCOUNT
-# near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234423, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation" }' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234234, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation" }' --accountId $MASTERACCOUNT # --deposit 5
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation" }' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT get_escrow '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT client_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT contractor_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT get_all_escrow '{"client": "'$MASTERACCOUNT'" }' --accountId $MASTERACCOUNT
 
 # near view $NFTACCOUNT nft_metadata
-TOKENNAME="token-123"
-# near call $NFTACCOUNT nft_mint '{"token_id": "'$TOKENNAME'", "receiver_id": "'$MASTERACCOUNT'", "metadata": {"title": "My Non Fungible Team Token", "description": "The Team Most Certainly Goes :)", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif"} }' --accountId $MASTERACCOUNT --amount 0.1
-# near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
-near call $SUBACCOUNT set_nft_deliverable '{"nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT
-# near call $SUBACCOUNT set_deliverable '{"client": "artpay.testnet", "id": 1, "nft_address": "nft.artpay.testnet", "token_id": "token-13"}' --accountId $MASTERACCOUNT
+TOKENNAME="token-121"
+near call $NFTACCOUNT nft_mint '{"token_id": "'$TOKENNAME'", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
+near call $SUBACCOUNT set_nft_deliverable '{"client": "artpay.testnet", "id": 1,"nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+# near call $SUBACCOUNT set_deliverable '{"client": "artpay.testnet", "id": 1, "nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT

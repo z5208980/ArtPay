@@ -26,8 +26,16 @@ main() {
 main
 
 # TESTING
-near call $NFTACCOUNT nft_mint '{"token_id": "token-1", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif"}, "receiver_id": "'$NFTACCOUNT'"}' --accountId $NFTACCOUNT --amount 0.1
-near call $NFTACCOUNT nft_mint '{"token_id": "token-2", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": 1 }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
+near call $NFTACCOUNT nft_mint '{"token_id": "token-nft1", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
+# near call $NFTACCOUNT nft_mint '{"token_id": "token-master", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
 
-# near view $NFTACCOUNT nft_token '{"token_id": "token-1"}'
+# near view $NFTACCOUNT nft_token '{"token_id": "token-nft1"}'
 # near call $NFTACCOUNT nft_transfer '{"receiver_id": "rafaam.testnet", "token_id": "token-1", "approval_id": 2, "msg": "foo"}' --accountId $NFTACCOUNT --depositYocto 1 --gas 200000000000000
+
+# near call $NFTACCOUNT nft_mint '{"token_id": "token-21", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
+# near view $NFTACCOUNT nft_token '{"token_id": "token-21"}'
+# near call $NFTACCOUNT nft_transfer '{"receiver_id": "rafaam.testnet", "token_id": "token-22", "approval_id": 2, "memo": "foo"}' --accountId $MASTERACCOUNT --depositYocto 1
+
+# near view $NFTACCOUNT nft_token '{"token_id": "token-22"}'
+near call $NFTACCOUNT nft_transfer_call '{"client": "artpay.testnet", "escrow_id": 1, "receiver_id": "escrow.artpay.testnet", "token_id": "token-nft1", "approval_id": 0, "msg": "foo"}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+# near view $NFTACCOUNT nft_is_approved '{"token_id": "token-22", "approved_account_id": "escrow.artpay.testnet"}'
