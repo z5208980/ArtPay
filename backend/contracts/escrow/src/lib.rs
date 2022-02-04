@@ -77,6 +77,10 @@ pub struct Escrow {
     escrow_type: String,
     description: String,
     requirement: String,
+    
+    license_code: String,  // Store short code abbreviations eg: 'by-nc-sa'
+    license_desc: String,  // Human readable
+    license_url: String, // link to contract (maybe HTTPS or IPFS address) 
 }
 
 #[ext_contract(ext_self)]
@@ -190,6 +194,11 @@ impl ArtPay {
         escrow_type: String,
         description: String,
         requirement: String,
+
+        license_code: String,  // Store short code abbreviations eg: 'by-nc-sa'
+        license_desc: String,  // Human readable
+        license_url: String, // link to contract (maybe HTTPS or IPFS address) 
+
     ) -> u128 {
         let account_id = env::signer_account_id(); // msg.sender
 
@@ -217,6 +226,10 @@ impl ArtPay {
             escrow_type,
             description,
             requirement,
+
+            license_code, 
+            license_desc, 
+            license_url
         });
 
         // Use env::log to record logs permanently to the blockchain!
