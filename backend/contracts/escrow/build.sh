@@ -37,6 +37,7 @@ main
 # near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_all_escrow '{"client": "'$MASTERACCOUNT'" }' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT get_escrows_filter '{"as_contractor": 1, "account": "$MASTERACCOUNT", "status_include":"AWAITING,APPROVAL"}' --accountId $MASTERACCOUNT
 
 # near view $NFTACCOUNT nft_metadata
 # TOKENNAME="token-nft2"

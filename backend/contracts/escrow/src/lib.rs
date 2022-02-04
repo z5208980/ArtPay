@@ -94,8 +94,9 @@ pub trait ArtPay {
 pub struct ArtPay {
     owner_id: AccountId,
     total_escrows: u128,
-    n_escrows: HashMap<AccountId, u128>,   
-    escrow_list: HashMap<AccountId, HashMap<u128, Escrow>>,
+    n_escrows: HashMap<AccountId, u128>,  // ClientId mapped to Escrow Id
+    contractor_escrows: HashMap<AccountId, u128>, // Contractor mapped to Escrow Id
+    escrow_list: HashMap<AccountId, HashMap<u128, Escrow>>, // Client Account mapping
 }
 
 #[near_bindgen]
@@ -106,6 +107,7 @@ impl ArtPay {
             owner_id,
             total_escrows: 0,
             n_escrows: HashMap::new(),
+            contractor_escrows: HashMap::new(),
             escrow_list: HashMap::new(),
         }
     }
@@ -197,7 +199,8 @@ impl ArtPay {
         if let Some(n) = self.n_escrows.get(&account_id) {
             escrow_id = n + 1;
         }
-        self.n_escrows.insert(account_id.clone(), escrow_id);
+        self.n_escrows.insert(account_id.clone(), escrow_id); // ClientId mapped
+        self.contractor_escrows.insert(contractor.clone(), escrow_id); //ContractorId mapped
 
         /* add new escrow to list */
         self.escrow_list.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
@@ -307,17 +310,52 @@ impl ArtPay {
     }
 
     /*
-        get ALL escrows for particular account
+        get escrows for particular account (as contractor or client) matching statuses
     */
-    pub fn get_all_escrow(&self, client: AccountId) -> Vec<Option<Escrow>> {
+    pub fn get_escrows_filter(&self, as_contractor: bool, account: AccountId, status_include: Vec<EscrowState>) -> Vec<Option<Escrow>> {
         let mut vec = Vec::new();
-        if let Some(n) = self.n_escrows.get(&client) {
-            if let Some(escrows) = self.escrow_list.get(&client.clone()) {
-                for id in 0..(*n+1) {  // eg. 0..4 = [0,1,2,3]
-                    vec.push(escrows.get(&id).cloned());
+
+        if as_contractor 
+        {
+            // As Contractor match on contractor_escrows accountId
+            if let Some(n) = self.contractor_escrows.get(&account)
+            {
+                if let Some(escrows) = self.escrow_list.get(&account.clone()) {
+                    for id in 0..(*n+1) {  // eg. 0..4 = [0,1,2,3]
+                        let cur = escrows.get(&id);
+                        match cur {
+                            Some(x) => {
+                                // one only matching either include criteria
+                                if status_include.iter().any(|v| v == &x.escrow_state ) {
+                                    vec.push(cur.cloned());
+                                }  
+                            },
+                            None => {}
+                        }
+                    }
+                }
+            }
+        } else {
+            // As Client match on n_escrows accountId
+            if let Some(n) = self.n_escrows.get(&account) 
+            {
+                if let Some(escrows) = self.escrow_list.get(&account.clone()) {
+                    for id in 0..(*n+1) {  // eg. 0..4 = [0,1,2,3]
+                        let cur = escrows.get(&id);
+                        match cur {
+                            Some(x) => {
+                                // one only matching either include criteria
+                                if status_include.iter().any(|v| v == &x.escrow_state ) {
+                                    vec.push(cur.cloned());
+                                }  
+                            },
+                            None => {}
+                        }
+                    }
                 }
             }
         }
         vec
     }
+
 }
