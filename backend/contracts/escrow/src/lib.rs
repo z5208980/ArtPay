@@ -83,6 +83,16 @@ pub struct Escrow {
     license_url: String, // link to contract (maybe HTTPS or IPFS address) 
 }
 
+#[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+pub struct EscrowCheckin {
+    escrow_id: u128,
+    update_type: String, // draft, draft#2 etc
+    message: String, 
+    media_url: String, // url or IPFS storage
+    timestamp: u128, // epoch_time
+}
+
 #[ext_contract(ext_self)]
 pub trait ArtPay {
     fn my_callback(&self) -> String;
@@ -98,9 +108,12 @@ pub trait ArtPay {
 pub struct ArtPay {
     owner_id: AccountId,
     total_escrows: u128,
+    total_checkins: u128,
     n_escrows: HashMap<AccountId, u128>,  // ClientId mapped to Escrow Id
     contractor_escrows: HashMap<AccountId, u128>, // Contractor mapped to Escrow Id
     escrow_list: HashMap<AccountId, HashMap<u128, Escrow>>, // Client Account mapping
+    n_escrow_checkins: HashMap<u128, u128>,
+    escrow_checkins: HashMap<u128, HashMap<u128, EscrowCheckin>> // escrowId, updateId
 }
 
 #[near_bindgen]
@@ -110,9 +123,13 @@ impl ArtPay {
         Self {
             owner_id,
             total_escrows: 0,
+            total_checkins: 0,
+
             n_escrows: HashMap::new(),
             contractor_escrows: HashMap::new(),
             escrow_list: HashMap::new(),
+            n_escrow_checkins: HashMap::new(), // manage cbyount
+            escrow_checkins: HashMap::new()
         }
     }
 
@@ -183,6 +200,44 @@ impl ArtPay {
 
         response
     }
+
+    pub fn create_escrow_checkin(
+        &mut self,
+        escrow_id: u128,
+        update_type: String, // draft, draft#2 etc
+        message: String, 
+        media_url: String, // url or IPFS storage
+        timestamp: u128, // epoch_time
+
+    ) -> u128 {
+
+        let account_id = env::signer_account_id(); // msg.sender is contractor
+
+        /* handle counts of total and checkin id */
+        self.total_checkins += 1;
+
+        let mut checkin_id = 0;
+        if let Some(n) = self.n_escrow_checkins.get(&escrow_id) {
+            checkin_id = n + 1;
+        }
+        self.n_escrow_checkins.insert(escrow_id, checkin_id); // contractorId mapped
+        //TODO: Assert Escrow is related to Contractor (account_id)
+
+
+        /* add new escrow checkin to list */
+        self.escrow_checkins.entry(escrow_id.clone()).or_insert_with(HashMap::new).insert(checkin_id, EscrowCheckin {
+            escrow_id,
+            update_type, // draft, draft#2 etc
+            message, 
+            media_url, // url or IPFS storage
+            timestamp, // epoch_time
+        });
+        // Use env::log to record logs permanently to the blockchain!
+        env::log(format!("New Escrow Checkin created by {}", account_id).as_bytes());
+
+        checkin_id
+    }
+
 
     #[payable]
     pub fn create_new_escrow(
@@ -312,10 +367,52 @@ impl ArtPay {
         false
     }
 
+
+    /*
+        get checkins associated with an escrow 
+    */
+    pub fn get_escrow_checkins_list(&self, escrow_id: u128) -> Vec<Option<EscrowCheckin>> {
+        let mut vec = Vec::new();
+        match self.escrow_checkins.get(&escrow_id) {
+            // return a list of checkins as a list 
+            Some(checkins) => {
+                let c  = checkins.len() as u128;
+                for id in 0..c-1 {
+                    let cur = checkins.get(&id);
+                    vec.push(cur.cloned());
+                }
+            }
+            None => {}
+        };
+        vec
+    }
+
+    /*
+        get checkin associated with a checkin id 
+    */
+    pub fn get_escrow_checkin(&self,  checkin_id: u128) -> Option<EscrowCheckin> {
+
+        match self.n_escrow_checkins.get(&checkin_id) 
+        {
+            Some(found_escrow_id) => { 
+                // we now can traverse the checkins on the found escrow
+                //let checkins = self.escrow_checkins.get(&found_escrow_id);
+                // locate the one matching the checkin_id
+                match self.escrow_checkins.get(&found_escrow_id) {
+                    Some(checkins) => return checkins.get(&checkin_id).cloned(),
+                    None => return None
+                }
+            }
+            None => return None
+        }
+    }
+
+
     /*
         get an escrow for particular account with particular id
     */
     pub fn get_escrow(&self, client: AccountId, id: u128) -> Option<Escrow> {
+
         match self.escrow_list.get(&client) {
             Some(escrows) => return escrows.get(&id).cloned(),
             None => return None,
