@@ -23,12 +23,12 @@ main() {
     deploy_contract     # deploy contract to fresh subaccount
 }
 
-main
+# main
 
 # CLI testing commands
-# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234423, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation" }' --accountId $MASTERACCOUNT --deposit 5
-# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234234, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation" }' --accountId $MASTERACCOUNT
-# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation" }' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234423, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT # --deposit 5
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234234, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $NFTACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT client_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
@@ -37,7 +37,9 @@ main
 # near call $SUBACCOUNT release_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_all_escrow '{"client": "'$MASTERACCOUNT'" }' --accountId $MASTERACCOUNT
-# near call $SUBACCOUNT get_escrows_filter '{"as_contractor": 1, "account": "$MASTERACCOUNT", "status_include":"AWAITING,APPROVAL"}' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT get_escrows_filter '{"as_contractor": true, "account": "'$MASTERACCOUNT'", "status_include": ["AWAITING","APPROVAL"]}' --accountId $MASTERACCOUNT
+# near view $SUBACCOUNT get_escrow_new '{"client": "'$NFTACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
+near call $SUBACCOUNT get_escrows_as_client --accountId $MASTERACCOUNT
 
 # near view $NFTACCOUNT nft_metadata
 # TOKENNAME="token-nft2"

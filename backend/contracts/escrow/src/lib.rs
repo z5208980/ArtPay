@@ -113,7 +113,15 @@ pub struct ArtPay {
     contractor_escrows: HashMap<AccountId, u128>, // Contractor mapped to Escrow Id
     escrow_list: HashMap<AccountId, HashMap<u128, Escrow>>, // Client Account mapping
     n_escrow_checkins: HashMap<u128, u128>,
-    escrow_checkins: HashMap<u128, HashMap<u128, EscrowCheckin>> // escrowId, updateId
+    escrow_checkins: HashMap<u128, HashMap<u128, EscrowCheckin>>, // escrowId, updateId
+
+
+    // Updated data structure
+    client_contractor: HashMap<AccountId, HashMap<AccountId, u128>>, // mapping(client -> mapping(contractor -> n_escrows))
+    contractor_client: HashMap<AccountId, HashMap<AccountId, u128>>, // mapping(contractor -> mapping(client -> n_escrows))
+    escrows: HashMap<String, Escrow>, // mapping(client+contractor+escrow_id -> Escrow)
+
+
 }
 
 #[near_bindgen]
@@ -129,7 +137,12 @@ impl ArtPay {
             contractor_escrows: HashMap::new(),
             escrow_list: HashMap::new(),
             n_escrow_checkins: HashMap::new(), // manage cbyount
-            escrow_checkins: HashMap::new()
+            escrow_checkins: HashMap::new(),
+
+
+            client_contractor: HashMap::new(),
+            contractor_client: HashMap::new(),
+            escrows: HashMap::new(),
         }
     }
 
@@ -259,15 +272,52 @@ impl ArtPay {
 
         /* handle counts of total and clients escrows id */
         self.total_escrows += 1;
-        let mut escrow_id = 0;
-        if let Some(n) = self.n_escrows.get(&account_id) {
-            escrow_id = n + 1;
-        }
-        self.n_escrows.insert(account_id.clone(), escrow_id); // ClientId mapped
-        self.contractor_escrows.insert(contractor.clone(), escrow_id); //ContractorId mapped
+        // let mut escrow_id = 0;
+        // if let Some(n) = self.n_escrows.get(&account_id) {
+        //     escrow_id = n + 1;
+        // }
+        // self.n_escrows.insert(account_id.clone(), escrow_id); // ClientId mapped
+        // self.contractor_escrows.insert(contractor.clone(), escrow_id); //ContractorId mapped
 
-        /* add new escrow to list */
-        self.escrow_list.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
+        // /* add new escrow to list */
+        // self.escrow_list.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
+        //     client: account_id.clone(),
+        //     contractor,
+        //     locked_amount: near_sdk::env::attached_deposit(),
+        //     client_approval: false,
+        //     contractor_approval: false,
+        //     nft_address: "".to_string(),
+        //     token_id: "".to_string(),
+        //     timestamp, 
+        //     escrow_state: EscrowState::AWAITING,
+        //     title,
+        //     escrow_type,
+        //     description,
+        //     requirement,
+
+        //     license_code, 
+        //     license_desc, 
+        //     license_url
+        // });
+
+        // match self.escrow_list.get(&client) {
+        //     Some(escrows) => return escrows.get(&id).cloned(),
+        //     None => return None,
+        // };
+
+        // With new data struture
+        let mut escrow_id = 0;
+        if let Some(contractor_escrows) = self.client_contractor.get(&account_id) {
+            if let Some(n) = contractor_escrows.get(&contractor).cloned() {
+                escrow_id = n + 1;
+            }
+        }
+
+        self.client_contractor.entry(account_id.clone()).or_insert_with(HashMap::new).insert(contractor.clone(), escrow_id);
+        self.contractor_client.entry(contractor.clone()).or_insert_with(HashMap::new).insert(account_id.clone(), escrow_id);
+
+        // Id for escrows is now client+contractor+id
+        self.escrows.insert(format!("{}{}{}", account_id.to_string(), contractor.to_string(), escrow_id.to_string()), Escrow {
             client: account_id.clone(),
             contractor,
             locked_amount: near_sdk::env::attached_deposit(),
@@ -412,12 +462,46 @@ impl ArtPay {
         get an escrow for particular account with particular id
     */
     pub fn get_escrow(&self, client: AccountId, id: u128) -> Option<Escrow> {
-
         match self.escrow_list.get(&client) {
             Some(escrows) => return escrows.get(&id).cloned(),
             None => return None,
         };
     }
+
+    // Escrow Id in format: {client}{contractor}{id}
+    pub fn generate_key(&self, cl: AccountId, con: AccountId, id: u128) -> String {
+        let mut key: String = cl.to_string();
+        key.push_str(&con.to_string());
+        key.push_str(&id.to_string());
+        key
+    }
+
+    pub fn get_escrow_new(&self, client: AccountId, contractor: AccountId, id: u128) -> Option<Escrow> {
+        let key: String = self.generate_key(client, contractor, id);
+        if let Some(escrow) = self.escrows.get(&key) {
+            return Some(escrow).cloned();
+        }
+        None
+    }
+
+    /* O(n^2) may be costly,but the most simpliest and space efficient structure */
+    pub fn get_escrows_as_client(&self) -> Vec<Option<Escrow>>{
+        let mut vec = Vec::new();
+        let account_id = env::signer_account_id();
+
+        if let Some(contractor_escrows) = self.client_contractor.get(&account_id.clone()) { // Hashmap of contractors
+            for (contractor, v) in contractor_escrows.iter() { // Loop through contractors
+                // if let Some(n) = contractor_escrows.get(&contractor).cloned() { // u128
+                for id in 0..(*v+1) {  // eg. 0..4 = [0,1,2,3]
+                    vec.push(self.get_escrow_new(account_id.clone(), contractor.to_string(), id));
+                }
+                // }
+            }
+        }
+
+        vec
+    }
+
 
     /*
         get escrows for particular account (as contractor or client) matching statuses
