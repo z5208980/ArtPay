@@ -19,15 +19,17 @@ deploy_contract() {
 
 main() {
     cargo build --target wasm32-unknown-unknown --release       # Compile
-    reset_sub_account   # Make subaccount for new contract
-    deploy_contract     # deploy contract to fresh subaccount
+    # reset_sub_account   # Make subaccount for new contract
+    # deploy_contract     # deploy contract to fresh subaccount
 }
 
-# main
+main
 
 # CLI testing commands
 # near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234423, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT # --deposit 5
 # near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234234, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $NFTACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT # id == 2 which will be switched to APPROVAL
 # near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT
 # near call $SUBACCOUNT get_escrow '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT client_approval '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
@@ -38,16 +40,21 @@ main() {
 # near call $SUBACCOUNT get_escrow '{"client": "escrow.artpay.testnet", "id": 1}' --accountId $SUBACCOUNT
 # near call $SUBACCOUNT get_all_escrow '{"client": "'$MASTERACCOUNT'" }' --accountId $MASTERACCOUNT
 # near call $SUBACCOUNT get_escrows_filter '{"as_contractor": true, "account": "'$MASTERACCOUNT'", "status_include": ["AWAITING","APPROVAL"]}' --accountId $MASTERACCOUNT
-# near view $SUBACCOUNT get_escrow_new '{"client": "'$NFTACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
-near call $SUBACCOUNT get_escrows_as_client --accountId $MASTERACCOUNT
+# near view $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 2}' --accountId $MASTERACCOUNT
 
 # near view $NFTACCOUNT nft_metadata
-# TOKENNAME="token-nft2"
+# TOKENNAME="token-testget123"
 # near call $NFTACCOUNT nft_mint '{"token_id": "'$TOKENNAME'", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
-# near call $SUBACCOUNT set_nft_deliverable '{"client": "'$MASTERACCOUNT'", "id": 0, "nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+# near call $SUBACCOUNT set_nft_deliverable '{"client": "'$MASTERACCOUNT'", "id": 2, "nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+# near call $SUBACCOUNT get_escrows_as_contractor --accountId $MASTERACCOUNT
+
+# near call $SUBACCOUNT set_nft_deliverable '{"client": "'$MASTERACCOUNT'", "id": 1, "nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+
 # near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
-# near call $SUBACCOUNT get_escrow '{"client": "'$MASTERACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
+# near call $SUBACCOUNT get_escrows_as_contractor '{"client": "'$MASTERACCOUNT'", "id": 2}' --accountId $MASTERACCOUNT
 # near call $SUBACCOUNT cancel '{"client": "'$MASTERACCOUNT'", "id": 0}' --accountId $MASTERACCOUNT --gas 200000000000000 # --depositYocto 1
 # near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
 
-# near call $SUBACCOUNT get_all_escrow '{"client": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT
+# near call $SUBACCOUNT get_escrows_as_client_filtered_by_state '{"states": ["AWAITING"]}' --accountId $MASTERACCOUNT
+
+# near view $NFTACCOUNT nft_token '{"token_id": "token-testget123"}'
