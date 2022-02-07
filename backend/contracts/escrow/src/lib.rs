@@ -95,7 +95,8 @@ pub struct EscrowCheckin {
 
 #[ext_contract(ext_self)]
 pub trait ArtPay {
-    fn my_callback(&mut self, client: AccountId, id: u128, nft_address: AccountId, token_id: TokenId) -> bool;
+    // fn my_callback(&mut self, client: AccountId, id: u128, nft_address: AccountId, token_id: TokenId) -> bool;
+    fn my_callback(&self) -> bool;
 }
 /*
     This allows for O(1) lookup of a escrow for a particular user
@@ -152,41 +153,37 @@ impl ArtPay {
     #[payable]
     pub fn donate_to_artpay(&mut self) -> bool { true }
 
-    pub fn cancel(&mut self, client: AccountId, id: u128) {
-        match self.get_escrow(client.clone(), id.clone()){
-            Some(mut escrow) => {
-                let account_id = env::signer_account_id();
-                assert!(escrow.client.clone() == account_id, "Not ownership of escrow to cancel");
-                nft_interface::nft_transfer(
-                    escrow.contractor.to_string(), 
-                    escrow.token_id.clone(),
-                    Some(0), Some("Transfer Escrow ArtPay".to_string()),
-                    &(escrow.nft_address), // nft contract
-                    1, MAX_GAS // deposit, gas
-                );
-                // .then(ext_self::my_callback(&env::current_account_id(), 0, MAX_GAS));
+    pub fn cancel(&mut self, client: AccountId, contractor: AccountId, id: u128) {
+        let account_id = env::signer_account_id();
 
-                let to = escrow.client.clone();
-                Promise::new(to).transfer(escrow.locked_amount); 
+        if let Some(mut escrow) = self.get_escrow_new(client.clone(), contractor.clone(), id.clone()){
+            assert!(escrow.client.clone() == account_id, "Not ownership of escrow to cancel");
 
-                escrow.locked_amount = 0;
-                escrow.escrow_state = EscrowState::CANCEL;
-                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
-            },
-            None => {},
+            nft_interface::nft_transfer(
+                escrow.contractor.to_string(), 
+                escrow.token_id.clone(),
+                Some(0), Some("Transfer Escrow ArtPay".to_string()),
+                &(escrow.nft_address), // nft contract
+                1, MAX_GAS // deposit, gas
+            )
+            .then(ext_self::my_callback(&env::current_account_id(), NO_DEPOSIT, MAX_GAS));
+            Promise::new(escrow.client.clone()).transfer(escrow.locked_amount.clone()); 
+
+            escrow.locked_amount = 0;
+            escrow.escrow_state = EscrowState::CANCEL;
+            self.escrows.insert(self.generate_key(account_id.clone(), contractor.clone(), id.clone()), escrow);
         };
-
     }
 
-    fn my_callback(&mut self, 
-        client: AccountId, id: u128,
-        nft_address: AccountId, token_id: TokenId
-    ) -> bool {
+    // pub fn my_callback(&mut self, client: AccountId, id: u128, nft_address: AccountId, token_id: TokenId) -> bool {
+    pub fn my_callback(&self) -> bool {
         assert_eq!(env::promise_results_count(), 1, "This is a callback method");
         match env::promise_result(0) {
-            PromiseResult::NotReady => nv::panic(b"Error"),
+            PromiseResult::NotReady => env::panic(b"Error"),
             PromiseResult::Failed => env::panic(b"Error"),
-            PromiseResult::Successful(_result) => true,
+            PromiseResult::Successful(_result) => {
+                return true;
+            },
         }
     }
 
@@ -201,6 +198,7 @@ impl ArtPay {
         if let Some(escrow) = self.get_escrow_new(client.clone(), contractor.clone(), id.clone()) {
             assert!(escrow.escrow_state == EscrowState::AWAITING, "Wrong State");
             assert!(escrow.nft_address == "".to_string(), "Deliverable already set");
+            assert!(contractor == escrow.contractor, "You are not the contractor!");
         }
 
         let call = nft_interface::nft_transfer(
@@ -213,14 +211,16 @@ impl ArtPay {
         );
 
         let callback = ext_self::my_callback(
-            client.clone(), id.clone(), nft_address.clone(), token_id.clone(),
+            // client.clone(), id.clone(), nft_address.clone(), token_id.clone(),
             &contractor
             , NO_DEPOSIT, MAX_GAS
         );
         let response = call.then(callback);
 
-        /* Todo make sure that a false response doesn't set_deliverable! */ 
-        self.set_deliverable(client.clone(), id, nft_address.clone(), token_id);
+        // TODO: MAKE SURE THAT IS ERROR CHECKING NOT SURE HOW. TO PREVENT THIS SETTING OF NFT
+        // IDEAL SOLUTION: Get bool from repsonse and check if true to ensure transfer success, but don't know how
+        // Another is put this function in callback, but this gave error.
+        self.set_deliverable(client.clone(), id.clone(), nft_address.clone(), token_id.clone());
 
         response
     }
@@ -446,8 +446,8 @@ impl ArtPay {
                     Some(0), Some("Transfer Escrow ArtPay".to_string()),
                     &(escrow.nft_address), // nft contract
                     1, MAX_GAS // deposit, gas
-                );
-                // .then(ext_self::my_callback(&env::current_account_id(), 0, MAX_GAS));
+                )
+                .then(ext_self::my_callback(&env::current_account_id(), NO_DEPOSIT, MAX_GAS));
 
                 escrow.locked_amount = 0;
                 escrow.escrow_state = EscrowState::COMPLETE;
