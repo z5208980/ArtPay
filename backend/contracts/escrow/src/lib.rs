@@ -111,20 +111,13 @@ pub struct ArtPay {
     total_escrows: u128,
     total_checkins: u128,
 
-    n_escrows: HashMap<AccountId, u128>,  // ClientId mapped to Escrow Id   !NOTE: CAN REMOVE
-    contractor_escrows: HashMap<AccountId, u128>, // Contractor mapped to Escrow Id !NOTE: CAN REMOVE
-    escrow_list: HashMap<AccountId, HashMap<u128, Escrow>>, // Client Account mapping   !NOTE: CAN REMOVE
-
-    n_escrow_checkins: HashMap<u128, u128>,
-    escrow_checkins: HashMap<u128, HashMap<u128, EscrowCheckin>>, // escrowId, updateId
-    // escrow_checkins: HashMap<String, HashMap<u128, EscrowCheckin>>, // mapping(client+contractor+escrow_id -> mapping(checkin_id -> EscrowCheckin))
+    n_escrow_checkins: HashMap<String, u128>,
+    escrow_checkins: HashMap<String, HashMap<u128, EscrowCheckin>>, // escrowId, updateId
 
     // Updated data structure
     client_contractor: HashMap<AccountId, HashMap<AccountId, u128>>, // mapping(client -> mapping(contractor -> n_escrows))
     contractor_client: HashMap<AccountId, HashMap<AccountId, u128>>, // mapping(contractor -> mapping(client -> n_escrows))
     escrows: HashMap<String, Escrow>, // mapping(client+contractor+escrow_id -> Escrow)
-
-
 }
 
 #[near_bindgen]
@@ -136,12 +129,8 @@ impl ArtPay {
             total_escrows: 0,
             total_checkins: 0,
 
-            n_escrows: HashMap::new(),
-            contractor_escrows: HashMap::new(),
-            escrow_list: HashMap::new(),
             n_escrow_checkins: HashMap::new(), // manage cbyount
             escrow_checkins: HashMap::new(),
-
 
             client_contractor: HashMap::new(),
             contractor_client: HashMap::new(),
@@ -227,39 +216,46 @@ impl ArtPay {
 
     pub fn create_escrow_checkin(
         &mut self,
-        escrow_id: u128,
+        client: AccountId,
+        id: u128,
         update_type: String, // draft, draft#2 etc
         message: String, 
         media_url: String, // url or IPFS storage
         timestamp: u128, // epoch_time
-
     ) -> u128 {
-
         let account_id = env::signer_account_id(); // msg.sender is contractor
+        let escrow_id = self.generate_key(client.clone(), account_id.clone(), id.clone());  // key to escrow
 
-        /* handle counts of total and checkin id */
-        self.total_checkins += 1;
+        // Check if escrow exist in order to run this method
+        if let Some(_escrow) = self.get_escrow_new(client.clone(), account_id.clone(), id) {
+            // assert!(contractor == escrow.client, "You are not the contractor");
+                    
+            /* handle counts of total and checkin id */
+            self.total_checkins += 1;
+            let mut checkin_id = 0;
+            if let Some(n) = self.n_escrow_checkins.get(&escrow_id) {
+                checkin_id = n + 1;
+            }
+            self.n_escrow_checkins.insert(escrow_id.clone(), checkin_id);
 
-        let mut checkin_id = 0;
-        if let Some(n) = self.n_escrow_checkins.get(&escrow_id) {
-            checkin_id = n + 1;
-        }
-        self.n_escrow_checkins.insert(escrow_id, checkin_id); // contractorId mapped
-        //TODO: Assert Escrow is related to Contractor (account_id)
+            //TODO: Assert Escrow is related to Contractor (account_id)
 
+            /* add new escrow checkin to list */
+            self.escrow_checkins.entry(escrow_id.clone()).or_insert_with(HashMap::new).insert(checkin_id, EscrowCheckin {
+                escrow_id: id,
+                update_type, // draft, draft#2 etc
+                message, 
+                media_url, // url or IPFS storage
+                timestamp, // epoch_time
+            });
 
-        /* add new escrow checkin to list */
-        self.escrow_checkins.entry(escrow_id.clone()).or_insert_with(HashMap::new).insert(checkin_id, EscrowCheckin {
-            escrow_id,
-            update_type, // draft, draft#2 etc
-            message, 
-            media_url, // url or IPFS storage
-            timestamp, // epoch_time
-        });
-        // Use env::log to record logs permanently to the blockchain!
-        env::log(format!("New Escrow Checkin created by {}", account_id).as_bytes());
+            env::log(format!("New Escrow Checkin created by {}", account_id).as_bytes());
 
-        checkin_id
+            return checkin_id;
+        };
+
+        assert(false, "Escrow doesn't exist!");
+        return 0;
     }
 
 
@@ -283,41 +279,6 @@ impl ArtPay {
 
         /* handle counts of total and clients escrows id */
         self.total_escrows += 1;
-        // let mut escrow_id = 0;
-        // if let Some(n) = self.n_escrows.get(&account_id) {
-        //     escrow_id = n + 1;
-        // }
-        // self.n_escrows.insert(account_id.clone(), escrow_id); // ClientId mapped
-        // self.contractor_escrows.insert(contractor.clone(), escrow_id); //ContractorId mapped
-
-        // /* add new escrow to list */
-        // self.escrow_list.entry(account_id.clone()).or_insert_with(HashMap::new).insert(escrow_id, Escrow {
-        //     client: account_id.clone(),
-        //     contractor,
-        //     locked_amount: near_sdk::env::attached_deposit(),
-        //     client_approval: false,
-        //     contractor_approval: false,
-        //     nft_address: "".to_string(),
-        //     token_id: "".to_string(),
-        //     timestamp, 
-        //     escrow_state: EscrowState::AWAITING,
-        //     title,
-        //     escrow_type,
-        //     description,
-        //     requirement,
-
-        //     license_code, 
-        //     license_desc, 
-        //     license_url
-        // });
-
-        // match self.escrow_list.get(&client) {
-        //     Some(escrows) => return escrows.get(&id).cloned(),
-        //     None => return None,
-        // };
-
-        // With new data struture
-
         let mut escrow_id = 0;
         if let Some(contractor_escrows) = self.client_contractor.get(&account_id) {
             if let Some(n) = contractor_escrows.get(&contractor).cloned() {
@@ -328,7 +289,6 @@ impl ArtPay {
         // Note client_contractor[client][contractor] == contractor_client[contractor][client]
         self.client_contractor.entry(account_id.clone()).or_insert_with(HashMap::new).insert(contractor.clone(), escrow_id);
         self.contractor_client.entry(contractor.clone()).or_insert_with(HashMap::new).insert(account_id.clone(), escrow_id);
-
 
         // Id for escrows is now client+contractor+id
         self.escrows.insert(self.generate_key(account_id.clone(), contractor.clone(), escrow_id), Escrow {
@@ -358,20 +318,6 @@ impl ArtPay {
         escrow_id
     }
 
-    // pub fn client_approval(&mut self, client: AccountId, id: u128) -> bool {
-    //     match self.get_escrow(client.clone(), id.clone()){
-    //         Some(mut escrow) => {
-    //             assert!(escrow.escrow_state == EscrowState::APPROVAL, "Wrong State");
-    //             let account_id = env::signer_account_id();
-    //             assert!(account_id == escrow.contractor, "You are not the client");
-    //             escrow.client_approval = true;
-    //             self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
-    //             return true;
-    //         },
-    //         None => return false,
-    //     };
-    // }
-
     pub fn client_approval(&mut self, contractor: AccountId, id: u128) -> bool {
         let client = env::signer_account_id(); // msg.sender    
         if let Some(mut escrow) = self.get_escrow_new(client.clone(), contractor.clone(), id) {
@@ -384,20 +330,6 @@ impl ArtPay {
         };
         false
     }
-  
-    // pub fn contractor_approval(&mut self, client: AccountId, id: u128) -> bool {
-    //     match self.get_escrow(client.clone(), id.clone()){
-    //         Some(mut escrow) => {
-    //             assert!(escrow.escrow_state == EscrowState::APPROVAL, "Wrong State");
-    //             let account_id = env::signer_account_id();
-    //             assert!(account_id == escrow.contractor, "You are not the contractor!");
-    //             escrow.contractor_approval = true;
-    //             self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
-    //             return true;
-    //         },
-    //         None => return false,
-    //     };
-    // }
 
     pub fn contractor_approval(&mut self, client: AccountId, id: u128) -> bool {
         let contractor = env::signer_account_id(); // msg.sender
@@ -434,8 +366,8 @@ impl ArtPay {
     }
 
     #[payable]
-    pub fn release_escrow(&mut self, client: AccountId, id: u128) -> bool {
-        match self.get_escrow(client.clone(), id.clone()) {
+    pub fn release_escrow(&mut self, client: AccountId, contractor: AccountId, id: u128) -> bool {
+        match self.get_escrow_new(client.clone(), contractor.clone(), id.clone()) {
             Some(mut escrow) => {
                 assert!(escrow.client_approval && escrow.contractor_approval, "Not fully approved");
                 let to = escrow.contractor.clone();
@@ -451,7 +383,7 @@ impl ArtPay {
 
                 escrow.locked_amount = 0;
                 escrow.escrow_state = EscrowState::COMPLETE;
-                self.escrow_list.entry(client).or_insert_with(HashMap::new).insert(id, escrow);
+                self.escrows.insert(self.generate_key(client.clone(), contractor.clone(), id.clone()), escrow);
                 return true;
             },
             None => {},
@@ -463,49 +395,24 @@ impl ArtPay {
     /*
         get checkins associated with an escrow 
     */
-    pub fn get_escrow_checkins_list(&self, escrow_id: u128) -> Vec<Option<EscrowCheckin>> {
-        let mut vec = Vec::new();
-        match self.escrow_checkins.get(&escrow_id) {
-            // return a list of checkins as a list 
-            Some(checkins) => {
-                let c  = checkins.len() as u128;
-                for id in 0..c-1 {
-                    let cur = checkins.get(&id);
-                    vec.push(cur.cloned());
-                }
+    pub fn get_escrow_checkins_list(&self, client: AccountId, contractor: AccountId, id: u128) -> Vec<Option<EscrowCheckin>> {
+        let mut vec = Vec::new();  
+        if let Some(checkins) = self.escrow_checkins.get(&self.generate_key(client.clone(), contractor.clone(), id.clone())){
+            let c  = checkins.len() as u128;
+            for id in 0..c-1 {
+                let cur = checkins.get(&id);
+                vec.push(cur.cloned());
             }
-            None => {}
-        };
+        }
         vec
     }
 
     /*
         get checkin associated with a checkin id 
     */
-    pub fn get_escrow_checkin(&self,  checkin_id: u128) -> Option<EscrowCheckin> {
-
-        match self.n_escrow_checkins.get(&checkin_id) 
-        {
-            Some(found_escrow_id) => { 
-                // we now can traverse the checkins on the found escrow
-                //let checkins = self.escrow_checkins.get(&found_escrow_id);
-                // locate the one matching the checkin_id
-                match self.escrow_checkins.get(&found_escrow_id) {
-                    Some(checkins) => return checkins.get(&checkin_id).cloned(),
-                    None => return None
-                }
-            }
-            None => return None
-        }
-    }
-
-
-    /*
-        get an escrow for particular account with particular id
-    */
-    pub fn get_escrow(&self, client: AccountId, id: u128) -> Option<Escrow> {
-        match self.escrow_list.get(&client) {
-            Some(escrows) => return escrows.get(&id).cloned(),
+    pub fn get_escrow_checkin(&self, client: AccountId, contractor: AccountId, id: u128, checkin_id: u128) -> Option<EscrowCheckin> {
+        match self.escrow_checkins.get(&self.generate_key(client.clone(), contractor.clone(), id.clone()))  {
+            Some(checkins) => return checkins.get(&checkin_id).cloned(),
             None => return None,
         };
     }
@@ -592,55 +499,6 @@ impl ArtPay {
 
         vec
     }
-
-    /*
-        get escrows for particular account (as contractor or client) matching statuses
-    */
-    // pub fn get_escrows_filter(&self, as_contractor: bool, account: AccountId, status_include: Vec<EscrowState>) -> Vec<Option<Escrow>> {
-    //     let mut vec = Vec::new();
-
-    //     if as_contractor 
-    //     {
-    //         // As Contractor match on contractor_escrows accountId
-    //         if let Some(n) = self.contractor_escrows.get(&account)
-    //         {
-    //             if let Some(escrows) = self.escrow_list.get(&account.clone()) {
-    //                 for id in 0..(*n+1) {  // eg. 0..4 = [0,1,2,3]
-    //                     let cur = escrows.get(&id);
-    //                     match cur {
-    //                         Some(x) => {
-    //                             // one only matching either include criteria
-    //                             if status_include.iter().any(|v| v == &x.escrow_state ) {
-    //                                 vec.push(cur.cloned());
-    //                             }  
-    //                         },
-    //                         None => {}
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     } else {
-    //         // As Client match on n_escrows accountId
-    //         if let Some(n) = self.n_escrows.get(&account) 
-    //         {
-    //             if let Some(escrows) = self.escrow_list.get(&account.clone()) {
-    //                 for id in 0..(*n+1) {  // eg. 0..4 = [0,1,2,3]
-    //                     let cur = escrows.get(&id);
-    //                     match cur {
-    //                         Some(x) => {
-    //                             // one only matching either include criteria
-    //                             if status_include.iter().any(|v| v == &x.escrow_state ) {
-    //                                 vec.push(cur.cloned());
-    //                             }  
-    //                         },
-    //                         None => {}
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     vec
-    // }
 
     /* Modifier */
     /* Still pending if this may cost more than a simple assert rather than another method call */
