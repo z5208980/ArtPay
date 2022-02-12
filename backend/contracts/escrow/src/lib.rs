@@ -142,6 +142,10 @@ impl ArtPay {
     #[payable]
     pub fn donate_to_artpay(&mut self) -> bool { true }
 
+    /*
+        In order for successful cancel, requires
+        --depositYocto 1 --gas 200000000000000
+    */
     #[payable]
     pub fn cancel(&mut self, client: AccountId, contractor: AccountId, id: u128) {
         let account_id = env::signer_account_id();
