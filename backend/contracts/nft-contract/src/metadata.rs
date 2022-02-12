@@ -7,13 +7,16 @@ pub type TokenId = String;
 #[derive(Serialize, Deserialize, BorshDeserialize, BorshSerialize, Copy, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub enum Assign {
+    BYNCND, 
+    BYNCSA, 
     BYND, 
     BYNC, 
     BYSA, 
-    BYNCND, 
-    BYNCSA, 
+    BY,
+    // CC0
     FULL,
 }
+
 
 //defines the payout type we'll be returning as a part of the royalty standards.
 #[derive(Serialize, Deserialize)]
