@@ -47,25 +47,25 @@ test_checkin() {
     near call $SUBACCOUNT get_escrow_checkins_list '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT 
 }
 
-TOKENNAME="token-test12313"
+TOKENNAME="token-testsadcnae"
 test_approval() {
-    # Both approval should be false
-    near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+    # # Both approval should be false
+    # near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
     
-    # Can't approval In Wrong State
-    near call $SUBACCOUNT client_approval '{"contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
-    near call $SUBACCOUNT contractor_approval '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+    # # Can't approval In Wrong State
+    # near call $SUBACCOUNT client_approval '{"contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+    # near call $SUBACCOUNT contractor_approval '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
 
     # mint token and set as deliverable
-    near call $NFTACCOUNT nft_mint '{"token_id": "'$TOKENNAME'", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call function", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
+    near call $NFTACCOUNT nft_mint '{"token_id": "'$TOKENNAME'", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call functiewrewron", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
     near call $SUBACCOUNT set_nft_deliverable '{"client": "'$MASTERACCOUNT'", "id": 1, "nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
   
-    # Can approve now     
-    near call $SUBACCOUNT client_approval '{"contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
-    near call $SUBACCOUNT contractor_approval '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+    # # Can approve now     
+    # near call $SUBACCOUNT client_approval '{"contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+    # near call $SUBACCOUNT contractor_approval '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
 
-    # Both approval should be true
-    near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+    # # Both approval should be true
+    # near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
 }
 
 test_getter() {
@@ -87,13 +87,21 @@ test_getter() {
 }
 
 test_cancel() {
-    near call $SUBACCOUNT cancel '{"client": "'$NFTACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 0}' --accountId $NFTACCOUNT
+    # near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
+
+    # Canceling escrow
+    near call $SUBACCOUNT cancel '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+
+    # Viewing escrow. Escrow must have CANCEL state
+    near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
 }
+
 # main
 # init_escrows
 # test_checkin
-# test_approval
+test_approval
 # test_getter
+test_cancel
 
 # OTHER COMMANDS
 # near call $SUBACCOUNT release_escrow '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT

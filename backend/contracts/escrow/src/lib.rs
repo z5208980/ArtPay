@@ -142,6 +142,7 @@ impl ArtPay {
     #[payable]
     pub fn donate_to_artpay(&mut self) -> bool { true }
 
+    #[payable]
     pub fn cancel(&mut self, client: AccountId, contractor: AccountId, id: u128) {
         let account_id = env::signer_account_id();
 
@@ -254,7 +255,7 @@ impl ArtPay {
             return checkin_id;
         };
 
-        assert(false, "Escrow doesn't exist!");
+        assert!(false, "Escrow doesn't exist!");
         return 0;
     }
 
