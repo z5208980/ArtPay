@@ -326,9 +326,8 @@ impl ArtPay {
     pub fn client_approval(&mut self, contractor: AccountId, id: u128) -> bool {
         let client = env::signer_account_id(); // msg.sender    
         if let Some(mut escrow) = self.get_escrow_new(client.clone(), contractor.clone(), id) {
-            assert!(client == escrow.contractor, "You are not the client");
             assert!(escrow.escrow_state == EscrowState::APPROVAL, "Wrong State");
-            
+            assert!(client == escrow.client, "You are not the client");            
             escrow.client_approval = true;
             self.escrows.insert(self.generate_key(client.clone(), contractor.clone(), id), escrow);
             return true;
@@ -340,7 +339,7 @@ impl ArtPay {
         let contractor = env::signer_account_id(); // msg.sender
         if let Some(mut escrow) = self.get_escrow_new(client.clone(), contractor.clone(), id) {
             self.check_state(escrow.clone(), EscrowState::APPROVAL);
-            assert!(contractor == escrow.client, "You are not the contractor");
+            assert!(contractor == escrow.contractor, "You are not the contractor");
             escrow.contractor_approval = true;
             self.escrows.insert(self.generate_key(client.clone(), contractor.clone(), id), escrow);
             return true;

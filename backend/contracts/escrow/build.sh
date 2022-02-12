@@ -96,14 +96,43 @@ test_cancel() {
     near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
 }
 
+
+TOKENNAME="token-testreleases1"
+test_release() {
+    # Create escrow with 5 NEAR locked for contractor
+    near state $MASTERACCOUNT 
+    near call $SUBACCOUNT create_new_escrow '{"contractor": "'$SUBACCOUNT'", "timestamp": 3243543, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT --amount 5
+    near state $MASTERACCOUNT 
+
+    # contractor to mint and set the delieverable
+    near call $NFTACCOUNT nft_mint '{"token_id": "'$TOKENNAME'", "metadata": {"title": "NFT Tutorial Token", "description": "Testing the transfer call functiewrewron", "media": "https://bafybeiftczwrtyr3k7a2k4vutd3amkwsmaqyhrdzlhvpt33dyjivufqusq.ipfs.dweb.link/goteam-gif.gif", "copyright": "copright information", "right_assign": "FULL" }, "receiver_id": "'$MASTERACCOUNT'"}' --accountId $MASTERACCOUNT --amount 0.1
+    near call $SUBACCOUNT set_nft_deliverable '{"client": "'$MASTERACCOUNT'", "id": 0, "nft_address": "nft.artpay.testnet", "token_id": "'$TOKENNAME'"}' --accountId $SUBACCOUNT --depositYocto 1 --gas 200000000000000
+
+    # near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$SUBACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
+    # near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
+
+    # Trying to release escrow will result in failure
+    near call $SUBACCOUNT release_escrow '{"client": "'$MASTERACCOUNT'", "contractor": "'$SUBACCOUNT'", "id": 0}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+
+    near call $SUBACCOUNT client_approval '{"contractor": "'$SUBACCOUNT'", "id": 0}' --accountId $MASTERACCOUNT
+    near call $SUBACCOUNT contractor_approval '{"client": "'$MASTERACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
+    # Success only after two parties approve
+    near state $SUBACCOUNT 
+    near call $SUBACCOUNT release_escrow '{"client": "'$MASTERACCOUNT'", "contractor": "'$SUBACCOUNT'", "id": 0}' --accountId $MASTERACCOUNT --depositYocto 1 --gas 200000000000000
+
+    # since client, NFT should belong to them
+    near view $NFTACCOUNT nft_token '{"token_id": "'$TOKENNAME'"}'
+    # 5 NEAR should be added to contractor
+    near state $SUBACCOUNT 
+
+    # Escrow should be COMPLETE
+    near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$SUBACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
+}
+
 # main
 # init_escrows
 # test_checkin
-test_approval
+# test_approval
 # test_getter
-test_cancel
-
-# OTHER COMMANDS
-# near call $SUBACCOUNT release_escrow '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $MASTERACCOUNT
-# near call $SUBACCOUNT release_escrow '{"client": "'$MASTERACCOUNT'", "id": 1}' --accountId $SUBACCOUNT
-# near call $SUBACCOUNT cancel '{"client": "'$NFTACCOUNT'", "contractor": "'$MASTERACCOUNT'", "id": 0}' --accountId $NFTACCOUNT
+# test_cancel
+# test_release
