@@ -23,6 +23,7 @@ main() {
     deploy_contract     # deploy contract to fresh subaccount
 }
 
+
 # CLI testing commands
 init_escrows() {
     near call $SUBACCOUNT create_new_escrow '{"contractor": "'$MASTERACCOUNT'", "timestamp": 1234423, "title": "project X", "description": "NFT project", "escrow_type": "1", "requirement": "IPFS documentation", "license_code": "String", "license_desc": "String", "license_url": "String" }' --accountId $MASTERACCOUNT # --deposit 5
@@ -129,7 +130,7 @@ test_release() {
     near call $SUBACCOUNT get_escrow_new '{"client": "'$MASTERACCOUNT'", "contractor": "'$SUBACCOUNT'", "id": 0}' --accountId $SUBACCOUNT
 }
 
-# main
+main #uncomment phase you need to run. then #comment the others out.
 # init_escrows
 # test_checkin
 # test_approval
