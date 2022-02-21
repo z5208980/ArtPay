@@ -15,8 +15,6 @@
             <div @click="getMetaData()" :class="btnStyle">
               getMetaData
             </div>
-            rightAssign
-
             <h2 class="font-bold">Mint new NFT</h2>
             <div class="py-2">Token ID</div>
             <input v-model="newNFT.tokenId" :class="inputStyle" type="text" />
@@ -113,21 +111,39 @@
 
 
           <h2 class="font-bold">View Escrow</h2>
-          <div class="py-2">Client Address</div>
+          <input type="checkbox" id="checkbox" v-model="viewEscrow.you">
+          <label for="checkbox">Are you client of escrow? {{ viewEscrow.you }}</label>
+          <div class="py-2">Other Address</div>
           <input v-model="viewEscrow.client" :class="inputStyle" placeholder="Client escrow" type="text" />
           <div class="py-2">Escrow ID</div>
           <input v-model="viewEscrow.tokenId" :class="inputStyle" placeholder="Escrow Id" type="text" />
           <div @click="viewEscrowToken()" :class="btnStyle">
             viewEscrow
           </div>
+          <template v-if="viewEscrow.you">
+            <div @click="approveClient()" :class="btnStyle">
+              approveClient
+            </div>
+          </template>
+          <template v-else>
+            <div @click="approveContractor()" :class="btnStyle">
+              approveContractor
+            </div>
+          </template>
 
-          <!-- <div @click="viewEscrowAsClient()" :class="btnStyle">
+          <div @click="releaseEscrow()" :class="btnStyle">
+            releaseEscrow
+          </div>
+
+          <hr>
+
+          <div @click="viewEscrowAsClient()" :class="btnStyle">
             viewEscrowAsClient
           </div>
 
           <div @click="viewEscrowAsContractor()" :class="btnStyle">
-            viewEscrowAsClient
-          </div> -->
+            viewEscrowAsContractor
+          </div>
         </div>
       </div>
     </div>
@@ -159,7 +175,7 @@ const abi = {
   },
   escrow: {
     contractAddr: "escrow.artpay.testnet",
-    viewMethods: ["get_escrow"],
+    viewMethods: ["get_escrow", "get_escrow_new"],
     changeMethods: ["release_escrow", "contractor_approval", "client_approval", 
     "create_new_escrow", "take_my_money", "set_deliverable", "set_nft_deliverable",
     "get_escrows_as_contractor", "get_escrows_as_client"],
@@ -210,6 +226,7 @@ export default {
         tokenId: "token-1",
       },
       viewEscrow: {
+        you: true,
         client: "artpay.testnet",
         tokenId: "1",
       },
@@ -284,12 +301,12 @@ export default {
       await contractNFT.create_new_escrow(
         {
           contractor: this.newEscrowFormData.contractor,
-          nft_address: this.newEscrowFormData.nftAddress,
-          token_id: this.newEscrowFormData.tokenId,
+          // nft_address: this.newEscrowFormData.nftAddress,
+          // token_id: this.newEscrowFormData.tokenId,
           timestamp: expiryDate.getTime(),
           title: this.newEscrowFormData.title,
-          escrow_type: this.newEscrowFormData.escrowType,
           description: this.newEscrowFormData.description,
+          escrow_type: this.newEscrowFormData.escrowType,
           requirement: "IPFS documentation", 
           license_code: "Licencse Code", license_desc: "Example Licence", license_url: "IPFS Link"
         }, this.MAX_GAS, this.newEscrowFormData.lockedFunds 
@@ -297,20 +314,33 @@ export default {
     },
     async viewEscrowAsClient() {
       const contractNFT = this.loadNFTContract('escrow');
-      const escrows = await contractNFT.get_escrows_as_client({}, this.MAX_GAS, 0);
+      const escrows = await contractNFT.get_escrows_as_client({});
       console.log(escrows);
     },
     async viewEscrowAsContractor() {
       const contractNFT = this.loadNFTContract('escrow');
-      const escrows = await contractNFT.get_escrows_as_contractor({}, this.MAX_GAS, 0);
+      const escrows = await contractNFT.get_escrows_as_contractor({});
       console.log(escrows);
     },
+    async approveClient() {
+      const contractNFT = this.loadNFTContract('escrow');
+      await contractNFT.client_approval({ contractor: this.viewEscrow.client, id: Number(this.viewEscrow.tokenId) });
+    },
+    async approveContractor() {
+      const contractNFT = this.loadNFTContract('escrow');
+      await contractNFT.contractor_approval({ client: this.viewEscrow.client, id: Number(this.viewEscrow.tokenId) });
+    },
     async setNFTDeliverable() {
-      const contractNFT = this.loadNFTContract('nft');
-      this.globalMessage = await contractNFT.nft_transfer(
-        { receiver_id: "escrow.artpay.testnet", token_id: this.escrowDeliverable.tokenId.toString(), approval_id: 0, msg: "For ArtPay Escrow" },
-        this.MAX_GAS, 1
-      );
+      const contractNFT = this.loadNFTContract('escrow');
+      // this.globalMessage = await contractNFT.nft_transfer(
+      //   { receiver_id: "escrow.artpay.testnet", token_id: this.escrowDeliverable.tokenId.toString(), approval_id: 0, msg: "For ArtPay Escrow" },
+      //   this.MAX_GAS, 1
+      // );
+
+      this.globalMessage = await contractNFT.set_nft_deliverable({
+        client: this.escrowDeliverable.client, id: Number(this.escrowDeliverable.escrowId), 
+        nft_address: this.escrowDeliverable.nftAddress, "token_id": this.escrowDeliverable.tokenId.toString()
+      }, 200000000000000, 1)
 
       this.globalMessage.then(result => {
         console.log(result);
@@ -329,9 +359,20 @@ export default {
     async viewEscrowToken() {
       this.globalMessage = `Getting Escrow`;
       const contractEscrow = this.loadNFTContract('escrow');
-      this.globalMessage = await contractEscrow.get_escrow(
-        { client: this.viewEscrow.client, id: Number(this.viewEscrow.tokenId) }
-      );
+
+      let args =  { client: this.wallet.getAccountId(), contractor: this.viewEscrow.client, id: Number(this.viewEscrow.tokenId) }
+      if (!this.viewEscrow.you) {
+        args = { client: this.viewEscrow.client, contractor: this.wallet.getAccountId(), id: Number(this.viewEscrow.tokenId) }
+      } 
+      this.globalMessage = await contractEscrow.get_escrow_new(args);
+    },
+    async releaseEscrow() {
+      const contractEscrow = this.loadNFTContract('escrow');
+      let args =  { client: this.wallet.getAccountId(), contractor: this.viewEscrow.client, id: Number(this.viewEscrow.tokenId) }
+      if (!this.viewEscrow.you) {
+        args = { client: this.viewEscrow.client, contractor: this.wallet.getAccountId(), id: Number(this.viewEscrow.tokenId) }
+      } 
+      await contractEscrow.release_escrow(args, 200000000000000, 1)
     },
     async sendOneNear() {
       this.globalMessage = "Sending One NEAR ...";
