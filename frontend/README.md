@@ -30,3 +30,17 @@ Note that the contracts, should of undergone the command,
 ```
 cargo build --target wasm32-unknown-unknown --release
 ```
+
+
+## Artpay
+
+### Login
+The first to use Artpay is to login with NEAR wallet.
+[]()
+
+## ArtPay NFT
+
+
+## ArtPay Escrow
+### Wallet
+Within your wallet you will be able to **logout**, and **donate**

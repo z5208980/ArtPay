@@ -175,10 +175,10 @@ const abi = {
   },
   escrow: {
     contractAddr: "escrow.artpay.testnet",
-    viewMethods: ["get_escrow", "get_escrow_new"],
+    viewMethods: ["get_escrow", "get_escrow_new", "get_escrows_as_contractor", "get_escrows_as_client"],
     changeMethods: ["release_escrow", "contractor_approval", "client_approval", 
     "create_new_escrow", "take_my_money", "set_deliverable", "set_nft_deliverable",
-    "get_escrows_as_contractor", "get_escrows_as_client"],
+   ],
   }
 }
 
@@ -242,7 +242,7 @@ export default {
       //   this.wallet.requestSignIn();
       // }
 
-      this.globalMessage = `Transaction: ${this.urlParams.has("transactionHashes") ? this.urlParams.get("transactionHashes") : "Transaction Failed"}`;
+      this.globalMessage = `Transaction: ${this.urlParams.has("transactionHashes") ? this.urlParams.get("transactionHashes") : ""}`;
       this.accountId = (this.wallet.isSignedIn() && this.wallet.getAccountId());
     },
     async login() {    
@@ -309,18 +309,18 @@ export default {
           escrow_type: this.newEscrowFormData.escrowType,
           requirement: "IPFS documentation", 
           license_code: "Licencse Code", license_desc: "Example Licence", license_url: "IPFS Link"
-        }, this.MAX_GAS, this.newEscrowFormData.lockedFunds 
+        }, this.MAX_GAS, utils.format.parseNearAmount(this.newEscrowFormData.lockedFunds.toString())
       );
     },
     async viewEscrowAsClient() {
       const contractNFT = this.loadNFTContract('escrow');
-      const escrows = await contractNFT.get_escrows_as_client({});
-      console.log(escrows);
+      this.globalMessage = await contractNFT.get_escrows_as_client({ account_id: this.wallet.getAccountId()});
+      console.log(this.globalMessage);
     },
     async viewEscrowAsContractor() {
       const contractNFT = this.loadNFTContract('escrow');
-      const escrows = await contractNFT.get_escrows_as_contractor({});
-      console.log(escrows);
+      this.globalMessage = await contractNFT.get_escrows_as_contractor({ account_id: this.wallet.getAccountId()});
+      console.log(this.globalMessage);
     },
     async approveClient() {
       const contractNFT = this.loadNFTContract('escrow');
