@@ -85,8 +85,10 @@
             <option value="3">Free Artwork</option>
             <option value="4">Artwork Custom</option>
           </select>
-          <div class="py-2">description</div>
+          <div class="py-2">Description</div>
           <input v-model="newEscrowFormData.description" :class="inputStyle" placeholder="Description" type="text" />
+          <div class="py-2">Requirements</div>
+          <input v-model="newEscrowFormData.description" :class="inputStyle" placeholder="Description" type="text" />   
           <div class="py-2">Expiry Date</div>
           <input v-model="newEscrowFormData.timestamp" :class="inputStyle" placeholder="Expiry Date" type="date" />
           <div class="py-2">Locked Funds (Near)</div>
@@ -118,6 +120,14 @@
           <div @click="viewEscrowToken()" :class="btnStyle">
             viewEscrow
           </div>
+
+          <!-- <div @click="viewEscrowAsClient()" :class="btnStyle">
+            viewEscrowAsClient
+          </div>
+
+          <div @click="viewEscrowAsContractor()" :class="btnStyle">
+            viewEscrowAsClient
+          </div> -->
         </div>
       </div>
     </div>
@@ -150,7 +160,9 @@ const abi = {
   escrow: {
     contractAddr: "escrow.artpay.testnet",
     viewMethods: ["get_escrow"],
-    changeMethods: ["release_escrow", "contractor_approval", "client_approval", "create_new_escrow", "take_my_money", "set_deliverable", "set_nft_deliverable"],
+    changeMethods: ["release_escrow", "contractor_approval", "client_approval", 
+    "create_new_escrow", "take_my_money", "set_deliverable", "set_nft_deliverable",
+    "get_escrows_as_contractor", "get_escrows_as_client"],
   }
 }
 
@@ -189,6 +201,7 @@ export default {
         title: "Project Title",
         description: "description",
         escrowType: "1",
+        requirements: "Create NFT art of a donkey!"
       },
       escrowDeliverable: {
         client: "artpay.testnet",
@@ -277,8 +290,20 @@ export default {
           title: this.newEscrowFormData.title,
           escrow_type: this.newEscrowFormData.escrowType,
           description: this.newEscrowFormData.description,
+          requirement: "IPFS documentation", 
+          license_code: "Licencse Code", license_desc: "Example Licence", license_url: "IPFS Link"
         }, this.MAX_GAS, this.newEscrowFormData.lockedFunds 
       );
+    },
+    async viewEscrowAsClient() {
+      const contractNFT = this.loadNFTContract('escrow');
+      const escrows = await contractNFT.get_escrows_as_client({}, this.MAX_GAS, 0);
+      console.log(escrows);
+    },
+    async viewEscrowAsContractor() {
+      const contractNFT = this.loadNFTContract('escrow');
+      const escrows = await contractNFT.get_escrows_as_contractor({}, this.MAX_GAS, 0);
+      console.log(escrows);
     },
     async setNFTDeliverable() {
       const contractNFT = this.loadNFTContract('nft');
