@@ -131,7 +131,7 @@ test_release() {
 }
 
 main #uncomment phase you need to run. then #comment the others out.
-# init_escrows
+init_escrows
 # test_checkin
 # test_approval
 # test_getter

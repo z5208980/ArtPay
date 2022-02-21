@@ -374,6 +374,7 @@ impl ArtPay {
         match self.get_escrow_new(client.clone(), contractor.clone(), id.clone()) {
             Some(mut escrow) => {
                 assert!(escrow.client_approval && escrow.contractor_approval, "Not fully approved");
+                assert!(escrow.escrow_state == EscrowState::APPROVAL, "Wrong State!");
                 let to = escrow.contractor.clone();
                 Promise::new(to).transfer(escrow.locked_amount); // FUNDS RELEASED HERE! pay to contractor the locked funds of this escrow
                 nft_interface::nft_transfer(
@@ -441,9 +442,10 @@ impl ArtPay {
         O(n^2) may be costly,but the most simpliest and space efficient structure 
         Get all escrow related to the client
     */
-    pub fn get_escrows_as_client(&self) -> Vec<Option<Escrow>>{
+    pub fn get_escrows_as_client(&self, account_id: AccountId) -> Vec<Option<Escrow>>{
         let mut vec = Vec::new();
-        let account_id = env::signer_account_id();
+        // assert!(env::signer_account_id() != account_id, "No permission");
+        // let account_id = env::signer_account_id();
 
         if let Some(contractor_escrows) = self.client_contractor.get(&account_id.clone()) { // Hashmap of contractors
             for (contractor, v) in contractor_escrows.iter() { // Loop through contractors
@@ -460,9 +462,10 @@ impl ArtPay {
         O(n^2) may be costly,but the most simpliest and space efficient structure 
         Get all escrows related to the contractor
     */
-    pub fn get_escrows_as_contractor(&self) -> Vec<Option<Escrow>>{
+    pub fn get_escrows_as_contractor(&self, account_id: AccountId) -> Vec<Option<Escrow>>{
         let mut vec = Vec::new();
-        let account_id = env::signer_account_id();
+        // assert!(env::signer_account_id() != account_id, "No permission");
+        // let account_id = env::signer_account_id();
 
         if let Some(contractor_escrows) = self.contractor_client.get(&account_id.clone()) { // Hashmap of contractors
             for (contractor, v) in contractor_escrows.iter() { // Loop through contractors
@@ -479,7 +482,7 @@ impl ArtPay {
     pub fn get_escrows_as_contractor_filtered_by_state(&self, states: Vec<EscrowState>) -> Vec<Option<Escrow>> {
         let mut vec = Vec::new();
 
-        for i in self.get_escrows_as_contractor().into_iter() {
+        for i in self.get_escrows_as_contractor(env::signer_account_id()).into_iter() {
             if let Some(escrow) = i {
                 if states.iter().any(|v| v == &escrow.escrow_state ) {
                     vec.push(Some(escrow.clone()));
@@ -493,7 +496,7 @@ impl ArtPay {
     pub fn get_escrows_as_client_filtered_by_state(&self, states: Vec<EscrowState>) -> Vec<Option<Escrow>> {
         let mut vec = Vec::new();
 
-        for i in self.get_escrows_as_client().into_iter() {
+        for i in self.get_escrows_as_client(env::signer_account_id()).into_iter() {
             if let Some(escrow) = i {
                 if states.iter().any(|v| v == &escrow.escrow_state ) {
                     vec.push(Some(escrow.clone()));
