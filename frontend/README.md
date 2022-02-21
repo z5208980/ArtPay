@@ -26,19 +26,19 @@ The newly created NFT can be viewed by search for its `token-id`
 ![](readme/nft.png)
 
 ### Set Deliverable to Escrow
-Since we have our NFT create for the escrow, the **contractor** can now set there deliverable for approval.
+Since we have our NFT created for the escrow, the **contractor** can now set their deliverable for approval.
 ![](readme/set.png)
 
-If you view the escrow again, the escrow should be in the approve state with the NFT locked in.
-Viewing the NFT token, escrow.artpay.testnet should have ownership.
+If you view the escrow again, the escrow should be in the Approval state with the NFT locked in.
+Viewing the NFT token, `escrow.artpay.testnet` should have ownership.
 
 ### Approval
 In order for the escrow to be complete, both the client and contractor need to approve the requirements and deliverables.
 
-If your the client of the escrow, you can approve as the client
+If they are the client of the escrow, you can approve as the client
 ![](readme/approveClient.png)
 
-If your the client of the escrow, you can approve as the contractor
+If they are the client of the escrow, you can approve as the contractor
 ![](readme/approveContractor.png)
 
 Viewing the escrow, the attribute of `client_approval` and `contractor_approval` should be true.
