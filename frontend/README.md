@@ -9,8 +9,7 @@ A client can create a job or escrow payment by listing the requirements and desc
 ![alt text](readme/create.png)
 
 ### View created escrow
-you can view create escrow by using our view escrow. If you are a contractor, you'll need the contractor and the escrow id. In this case,
-we (a client), created an escrow to to artpay.testnet (the contractor) and that return the id of 4. Hence the inputs here is as followed,
+you can view create escrow by using our view escrow. If you are a client, you'll need the contractor as other address and the escrow id. If you are a contractor, you'll need the client address as other address and the escrow id In this case, we (a client), created an escrow to to artpay.testnet (the contractor) and that return the id of 4. Hence the inputs here is as followed,
 ![](readme/viewEscrow.png)
 ![](readme/escrow.png)
 
