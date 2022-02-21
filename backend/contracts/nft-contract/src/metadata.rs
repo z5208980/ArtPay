@@ -13,7 +13,7 @@ pub enum Assign {
     BYNC, 
     BYSA, 
     BY,
-    // CC0
+    CC0
     FULL,
 }
 
